@@ -1,0 +1,14 @@
+{
+  "rules": {
+    "events": {
+      ".read": true,
+      ".write": true,
+      "$eventId": {
+        ".validate": "newData.hasChild('name') && newData.hasChild('date') || !newData.exists()",
+        "count": {
+          ".validate": "newData.isNumber() && newData.val() >= 0"
+        }
+      }
+    }
+  }
+}
