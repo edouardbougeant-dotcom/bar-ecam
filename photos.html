@@ -1,0 +1,819 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>Photos — Bar ECAM Bruz</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+
+<!-- Firebase Realtime DB uniquement (gratuit, pas de Storage) -->
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+
+<style>
+/* ── DESIGN TOKENS — identiques à index.html ── */
+:root{
+  --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;
+  --border:rgba(255,255,255,0.07);--purple:#7B6EF6;
+  --purple-light:#a99ff8;--purple-dim:rgba(123,110,246,0.15);
+  --green:#4CAF82;--red:#E24B4A;--text:#f0f0f5;--muted:#6b6b80;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+
+/* ── PAGES ── */
+.page{display:none;min-height:100vh;}.page.active{display:block;}
+
+/* ── NAV ── */
+nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-filter:blur(12px);border-bottom:0.5px solid var(--border);padding:0 20px;}
+.nav-inner{max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px;}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.05em;color:var(--text);cursor:pointer;}
+.nav-logo span{color:var(--purple);}
+.nav-admin-btn{font-size:12px;color:var(--muted);cursor:pointer;padding:6px 10px;border-radius:8px;transition:color 0.2s,background 0.2s;}
+.nav-admin-btn:hover{color:var(--text);background:var(--surface2);}
+.nav-back{font-size:13px;color:var(--purple-light);cursor:pointer;display:flex;align-items:center;gap:5px;}
+.nav-back::before{content:'←';}
+
+/* ── HOME HEADER ── */
+.home-header{max-width:600px;margin:0 auto;padding:28px 20px 20px;}
+.home-title{font-size:11px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.home-sub{font-size:22px;font-weight:500;color:var(--text);}
+.home-sub span{color:var(--purple-light);}
+
+/* ── SOIRÉE LIST ── */
+.events-list{max-width:600px;margin:0 auto;padding:0 20px 100px;display:flex;flex-direction:column;gap:14px;}
+.event-photo-card{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;padding:16px;display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;transition:border-color 0.2s,transform 0.15s;}
+.event-photo-card:hover{border-color:rgba(123,110,246,0.35);transform:translateY(-1px);}
+.event-photo-card:active{transform:scale(0.99);}
+.epc-info{flex:1;min-width:0;}
+.epc-name{font-size:16px;font-weight:500;color:var(--text);margin-bottom:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.epc-date{font-size:12px;color:var(--muted);}
+.epc-count{font-size:12px;color:var(--purple-light);margin-top:3px;}
+.epc-actions{display:flex;gap:8px;align-items:center;flex-shrink:0;}
+.btn-add-photo{background:var(--purple);border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:9px 14px;cursor:pointer;white-space:nowrap;transition:background 0.2s;}
+.btn-add-photo:hover{background:#6a5ef0;}
+.btn-see-gallery{background:var(--surface2);border:0.5px solid var(--border);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:9px 14px;cursor:pointer;white-space:nowrap;transition:background 0.2s,border-color 0.2s;}
+.btn-see-gallery:hover{border-color:rgba(255,255,255,0.2);}
+
+/* ── UPLOAD PAGE ── */
+.upload-wrap{max-width:600px;margin:0 auto;padding:24px 20px 120px;}
+.upload-event-name{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--text);margin-bottom:2px;}
+.upload-event-date{font-size:13px;color:var(--muted);margin-bottom:28px;}
+.upload-zone{border:1.5px dashed rgba(123,110,246,0.4);border-radius:18px;background:var(--surface);padding:40px 20px;text-align:center;cursor:pointer;transition:border-color 0.2s,background 0.2s;position:relative;}
+.upload-zone:hover,.upload-zone.drag-over{border-color:var(--purple);background:var(--purple-dim);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;width:100%;height:100%;cursor:pointer;}
+.upload-icon{font-size:40px;margin-bottom:12px;}
+.upload-hint{font-size:15px;font-weight:500;color:var(--text);margin-bottom:5px;}
+.upload-sub{font-size:12px;color:var(--muted);}
+.preview-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:16px;}
+.preview-item{position:relative;aspect-ratio:1;border-radius:10px;overflow:hidden;background:var(--surface2);}
+.preview-item img{width:100%;height:100%;object-fit:cover;}
+.preview-remove{position:absolute;top:4px;right:4px;background:rgba(0,0,0,0.7);border:none;border-radius:50%;width:22px;height:22px;color:#fff;font-size:12px;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;}
+.preview-count-badge{position:absolute;inset:0;background:rgba(0,0,0,0.6);display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:500;color:#fff;}
+.upload-progress{margin-top:16px;}
+.progress-bar-wrap{height:4px;background:var(--surface2);border-radius:99px;overflow:hidden;margin-bottom:8px;}
+.progress-bar{height:100%;background:var(--purple);border-radius:99px;transition:width 0.3s ease;}
+.progress-label{font-size:12px;color:var(--muted);text-align:center;}
+.upload-msg{margin-top:20px;padding:14px;border-radius:12px;font-size:14px;text-align:center;display:none;}
+.upload-msg.success{background:rgba(76,175,130,0.1);border:0.5px solid rgba(76,175,130,0.3);color:var(--green);}
+.upload-msg.error{background:rgba(226,75,74,0.1);border:0.5px solid rgba(226,75,74,0.3);color:var(--red);}
+
+/* ── GALERIE ── */
+.gallery-wrap{max-width:600px;margin:0 auto;padding:24px 20px 100px;}
+.gallery-event-name{font-family:'Bebas Neue',sans-serif;font-size:36px;color:var(--text);margin-bottom:2px;}
+.gallery-event-date{font-size:13px;color:var(--muted);margin-bottom:20px;}
+.gallery-stats{display:flex;gap:12px;margin-bottom:24px;}
+.gallery-stat{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:12px 16px;flex:1;}
+.gallery-stat-num{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--text);line-height:1;}
+.gallery-stat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-top:2px;}
+.photo-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:3px;}
+.photo-thumb{aspect-ratio:1;overflow:hidden;cursor:pointer;background:var(--surface2);position:relative;}
+.photo-thumb img{width:100%;height:100%;object-fit:cover;transition:transform 0.2s;}
+.photo-thumb:hover img{transform:scale(1.04);}
+.photo-thumb:first-child{border-radius:12px 0 0 0;}
+.photo-thumb:nth-child(3){border-radius:0 12px 0 0;}
+
+/* ── LIGHTBOX ── */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,0.95);z-index:500;display:none;flex-direction:column;align-items:center;justify-content:center;}
+.lightbox.open{display:flex;}
+.lightbox-img{max-width:100vw;max-height:85vh;object-fit:contain;user-select:none;-webkit-user-drag:none;}
+.lightbox-close{position:absolute;top:16px;right:16px;background:rgba(255,255,255,0.1);border:none;border-radius:50%;width:40px;height:40px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.lightbox-close:hover{background:rgba(255,255,255,0.2);}
+.lightbox-nav{position:absolute;top:50%;transform:translateY(-50%);background:rgba(255,255,255,0.1);border:none;border-radius:50%;width:44px;height:44px;color:#fff;font-size:20px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:background 0.2s;}
+.lightbox-nav:hover{background:rgba(255,255,255,0.2);}
+.lightbox-prev{left:12px;}.lightbox-next{right:12px;}
+.lightbox-counter{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);font-size:13px;color:rgba(255,255,255,0.5);}
+
+/* ── ADMIN ── */
+.admin-wrap{max-width:600px;margin:0 auto;padding:24px 20px 60px;}
+.admin-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--text);margin-bottom:4px;}
+.admin-sub{font-size:14px;color:var(--muted);margin-bottom:24px;}
+.tabs{display:flex;gap:0;background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:4px;margin-bottom:24px;}
+.tab{flex:1;text-align:center;padding:9px 6px;border-radius:9px;font-size:13px;font-weight:500;cursor:pointer;color:var(--muted);transition:all 0.2s;position:relative;}
+.tab.active{background:var(--purple);color:#fff;}
+.tab-badge{position:absolute;top:3px;right:6px;background:var(--red);color:#fff;font-size:9px;font-weight:700;padding:1px 5px;border-radius:99px;min-width:16px;}
+.filter-bar{margin-bottom:18px;}
+.filter-bar select{width:100%;background:var(--surface);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:11px 14px;outline:none;-webkit-appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M6 8L0 0h12z' fill='%236b6b80'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+.filter-bar select option{background:#13131a;}
+.photo-mod-list{display:flex;flex-direction:column;gap:12px;}
+.photo-mod-item{background:var(--surface);border:0.5px solid var(--border);border-radius:14px;overflow:hidden;}
+.photo-mod-img-wrap{width:100%;aspect-ratio:4/3;overflow:hidden;background:var(--surface2);}
+.photo-mod-img-wrap img{width:100%;height:100%;object-fit:cover;}
+.photo-mod-meta{padding:12px 14px;}
+.photo-mod-event{font-size:11px;color:var(--purple-light);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:3px;}
+.photo-mod-date{font-size:12px;color:var(--muted);}
+.photo-mod-actions{display:flex;gap:8px;padding:0 14px 14px;}
+.btn-approve{flex:1;background:rgba(76,175,130,0.12);border:0.5px solid rgba(76,175,130,0.3);border-radius:10px;color:var(--green);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:11px;cursor:pointer;transition:background 0.2s;}
+.btn-approve:hover{background:rgba(76,175,130,0.22);}
+.btn-refuse{flex:1;background:rgba(226,75,74,0.08);border:0.5px solid rgba(226,75,74,0.2);border-radius:10px;color:var(--red);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:11px;cursor:pointer;transition:background 0.2s;}
+.btn-refuse:hover{background:rgba(226,75,74,0.18);}
+.btn-delete-photo{background:transparent;border:0.5px solid rgba(255,255,255,0.1);border-radius:10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:11px 14px;cursor:pointer;transition:all 0.2s;}
+.btn-delete-photo:hover{color:var(--red);border-color:rgba(226,75,74,0.3);}
+
+/* ── LOGIN ── */
+.login-wrap{max-width:360px;margin:80px auto;padding:0 20px;}
+.login-card{background:var(--surface);border:0.5px solid var(--border);border-radius:20px;padding:32px 28px;}
+.login-title{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--text);margin-bottom:4px;}
+.login-sub{font-size:14px;color:var(--muted);margin-bottom:24px;}
+.login-error{background:rgba(226,75,74,0.1);border:0.5px solid rgba(226,75,74,0.3);border-radius:8px;color:var(--red);font-size:13px;padding:10px 12px;margin-bottom:16px;display:none;}
+.field{margin-bottom:14px;}
+.field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px;}
+.field input{width:100%;background:var(--surface);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color 0.2s;}
+.field input:focus{border-color:var(--purple);}
+
+/* ── SHARED ── */
+.btn-admin{background:var(--purple);border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:12px 20px;cursor:pointer;transition:background 0.2s;}
+.btn-admin:hover{background:#6a5ef0;}
+.btn-admin:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-admin-outline{background:transparent;border:0.5px solid rgba(255,255,255,0.15);color:var(--text);}
+.btn-admin-outline:hover{background:var(--surface2);}
+.btn-full{width:100%;}
+.cta-sticky{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,15,0.96);backdrop-filter:blur(12px);border-top:0.5px solid var(--border);padding:14px 20px 20px;z-index:50;}
+.cta-sticky-inner{max-width:600px;margin:0 auto;}
+.btn-main{width:100%;background:var(--purple);border:none;border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:500;padding:17px;cursor:pointer;transition:background 0.2s,transform 0.1s;display:flex;align-items:center;justify-content:center;gap:8px;}
+.btn-main:hover{background:#6a5ef0;}.btn-main:active{transform:scale(0.98);}
+.btn-main:disabled{opacity:0.5;cursor:not-allowed;}
+.empty-state{text-align:center;padding:50px 20px;}
+.empty-state p{color:var(--muted);font-size:15px;line-height:1.7;}
+.empty-icon{font-size:40px;margin-bottom:14px;}
+.loading{display:flex;align-items:center;justify-content:center;padding:50px 20px;}
+.spinner{width:26px;height:26px;border:2px solid var(--surface2);border-top-color:var(--purple);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:12px 20px;font-size:14px;color:var(--text);opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.success{border-color:rgba(76,175,130,0.4);color:#4CAF82;}
+.toast.error{border-color:rgba(226,75,74,0.4);color:var(--red);}
+@keyframes fiu{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.anim{animation:fiu 0.35s ease both;}
+.d1{animation-delay:0.05s;}.d2{animation-delay:0.1s;}.d3{animation-delay:0.15s;}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo" id="navLogo" onclick="goHome()">BAR<span>.</span>ECAM <span style="font-size:13px;color:var(--muted);font-family:'DM Sans',sans-serif;font-weight:400;letter-spacing:0;">📸</span></div>
+    <div class="nav-admin-btn" id="adminNavBtn" onclick="goAdmin()">Admin</div>
+  </div>
+</nav>
+
+<!-- ════════════════════════════════════════════
+     PAGE HOME — liste des soirées avec compteurs
+════════════════════════════════════════════ -->
+<div class="page active" id="page-home">
+  <div class="home-header anim">
+    <div class="home-title">Bar étudiant · ECAM Bruz</div>
+    <div class="home-sub">Photos des <span>soirées</span></div>
+  </div>
+  <div class="events-list" id="events-list">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PAGE UPLOAD — formulaire étudiant
+════════════════════════════════════════════ -->
+<div class="page" id="page-upload">
+  <div class="upload-wrap">
+    <div class="upload-event-name anim" id="upload-event-name">Soirée</div>
+    <div class="upload-event-date anim d1" id="upload-event-date"></div>
+
+    <div class="upload-zone anim d2" id="upload-zone">
+      <input type="file" id="file-input" accept="image/*" multiple capture="environment">
+      <div class="upload-icon">📷</div>
+      <div class="upload-hint">Appuie ici pour choisir tes photos</div>
+      <div class="upload-sub">Depuis ta galerie ou ton appareil photo · JPEG/PNG/HEIC</div>
+    </div>
+
+    <div class="preview-grid" id="preview-grid" style="display:none;"></div>
+
+    <div class="upload-progress" id="upload-progress" style="display:none;">
+      <div class="progress-bar-wrap"><div class="progress-bar" id="progress-bar" style="width:0%"></div></div>
+      <div class="progress-label" id="progress-label">Compression en cours…</div>
+    </div>
+
+    <div class="upload-msg" id="upload-msg"></div>
+  </div>
+
+  <div class="cta-sticky">
+    <div class="cta-sticky-inner">
+      <button class="btn-main" id="upload-btn" onclick="uploadPhotos()" disabled>
+        <span id="upload-btn-text">📤 Envoyer mes photos</span>
+      </button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PAGE GALERIE — photos approuvées
+════════════════════════════════════════════ -->
+<div class="page" id="page-gallery">
+  <div class="gallery-wrap">
+    <div class="gallery-event-name anim" id="gallery-event-name">Soirée</div>
+    <div class="gallery-event-date anim d1" id="gallery-event-date"></div>
+    <div class="gallery-stats anim d2" id="gallery-stats"></div>
+    <div class="photo-grid" id="photo-grid">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PAGE LOGIN ADMIN
+════════════════════════════════════════════ -->
+<div class="page" id="page-login">
+  <div class="login-wrap">
+    <div class="login-card anim">
+      <div class="login-title">Espace Admin</div>
+      <div class="login-sub">Modération photos — Bar ECAM</div>
+      <div class="login-error" id="login-error">Mot de passe incorrect.</div>
+      <div class="field">
+        <label>Mot de passe</label>
+        <input type="password" id="login-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-admin btn-full" onclick="doLogin()">Se connecter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     PAGE ADMIN — modération
+════════════════════════════════════════════ -->
+<div class="page" id="page-admin">
+  <div class="admin-wrap">
+    <div class="admin-title anim">Modération</div>
+    <div class="admin-sub anim d1">Valider les photos des soirées</div>
+
+    <div class="tabs anim d2">
+      <div class="tab active" id="tab-pending" onclick="switchTab('pending')">
+        En attente
+        <span class="tab-badge" id="badge-pending" style="display:none">0</span>
+      </div>
+      <div class="tab" id="tab-approved" onclick="switchTab('approved')">Approuvées</div>
+      <div class="tab" id="tab-refused" onclick="switchTab('refused')">Refusées</div>
+    </div>
+
+    <div class="filter-bar anim d3">
+      <select id="filter-event" onchange="renderAdminPhotos()">
+        <option value="">Toutes les soirées</option>
+      </select>
+    </div>
+
+    <div class="photo-mod-list" id="photo-mod-list">
+      <div class="loading"><div class="spinner"></div></div>
+    </div>
+
+    <div style="margin-top:28px;">
+      <button class="btn-admin btn-admin-outline btn-full" onclick="doLogout()">Se déconnecter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ════════════════════════════════════════════
+     LIGHTBOX
+════════════════════════════════════════════ -->
+<div class="lightbox" id="lightbox" onclick="closeLightbox(event)">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <button class="lightbox-nav lightbox-prev" onclick="lbNav(-1)">‹</button>
+  <img class="lightbox-img" id="lightbox-img" src="" alt="">
+  <button class="lightbox-nav lightbox-next" onclick="lbNav(1)">›</button>
+  <div class="lightbox-counter" id="lightbox-counter"></div>
+</div>
+
+<script>
+// ════════════════════════════════════════════
+// FIREBASE INIT — même projet que index.html
+// ════════════════════════════════════════════
+const firebaseConfig = {
+  apiKey: "AIzaSyAIQQp4DCQ0Twc6EG86kDMguCUtSpD5TSI",
+  authDomain: "bar-exam-dbc29.firebaseapp.com",
+  databaseURL: "https://bar-exam-dbc29-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId: "bar-exam-dbc29",
+  storageBucket: "bar-exam-dbc29.firebasestorage.app",
+  messagingSenderId: "560058741022",
+  appId: "1:560058741022:web:f87bcb50044da72a39190f"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════
+const ADMIN_PWD = "barecam2026";
+let isLoggedIn = false;
+let allEvents = {};          // { eventId: eventData }
+let currentEventId = null;   // soirée sélectionnée pour upload/galerie
+let selectedFiles = [];      // fichiers choisis par l'étudiant (objets {file, dataUrl})
+let adminPhotos = {};        // toutes les photos chargées pour l'admin
+let currentTab = 'pending';  // onglet admin actif
+let lbPhotos = [];           // photos dans le lightbox
+let lbIndex = 0;             // index courant lightbox
+let touchStartX = 0;         // swipe mobile
+
+// ════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-' + id).classList.add('active');
+  window.scrollTo(0, 0);
+}
+
+function goHome() {
+  currentEventId = null;
+  selectedFiles = [];
+  showPage('home');
+  loadHomeEvents();
+}
+
+function goAdmin() {
+  if (isLoggedIn) { showPage('admin'); loadAdminPhotos(); }
+  else showPage('login');
+}
+
+function doLogin() {
+  const pwd = document.getElementById('login-pwd').value;
+  const errEl = document.getElementById('login-error');
+  if (pwd === ADMIN_PWD) {
+    isLoggedIn = true;
+    document.getElementById('login-pwd').value = '';
+    errEl.style.display = 'none';
+    document.getElementById('adminNavBtn').textContent = 'Dashboard';
+    showPage('admin');
+    loadAdminPhotos();
+  } else {
+    errEl.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  isLoggedIn = false;
+  document.getElementById('adminNavBtn').textContent = 'Admin';
+  showToast('Déconnecté');
+  goHome();
+}
+
+// ════════════════════════════════════════════
+// HOME — liste des soirées avec compteurs
+// ════════════════════════════════════════════
+function loadHomeEvents() {
+  const list = document.getElementById('events-list');
+  list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+  db.ref('events').once('value').then(snap => {
+    allEvents = snap.val() || {};
+    const entries = Object.entries(allEvents).sort((a, b) =>
+      new Date(b[1].date + 'T00:00') - new Date(a[1].date + 'T00:00')
+    );
+
+    if (entries.length === 0) {
+      list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎉</div><p>Aucune soirée disponible pour le moment.</p></div>';
+      return;
+    }
+
+    list.innerHTML = '';
+    // Pour chaque soirée, on charge le compteur de photos approuvées
+    let rendered = 0;
+    entries.forEach(([id, ev], i) => {
+      db.ref('photos').orderByChild('eventId').equalTo(id).once('value').then(pSnap => {
+        const photos = pSnap.val() || {};
+        const approvedCount = Object.values(photos).filter(p => p.status === 'approved').length;
+        const pendingCount = Object.values(photos).filter(p => p.status === 'pending').length;
+
+        const card = document.createElement('div');
+        card.className = 'event-photo-card anim';
+        card.style.animationDelay = (i * 0.06) + 's';
+        card.innerHTML = `
+          <div class="epc-info">
+            <div class="epc-name">${ev.name}</div>
+            <div class="epc-date">${fmtDateShort(ev.date)}</div>
+            <div class="epc-count">${approvedCount > 0 ? '📸 ' + approvedCount + ' photo' + (approvedCount > 1 ? 's' : '') : 'Aucune photo publiée'}</div>
+          </div>
+          <div class="epc-actions">
+            ${approvedCount > 0 ? `<button class="btn-see-gallery" onclick="event.stopPropagation();openGallery('${id}')">Voir</button>` : ''}
+            <button class="btn-add-photo" onclick="event.stopPropagation();openUpload('${id}')">📸 Ajouter</button>
+          </div>`;
+        list.appendChild(card);
+      });
+    });
+  }).catch(() => {
+    list.innerHTML = '<div class="empty-state"><p>Erreur de connexion. Vérifie ta connexion internet.</p></div>';
+  });
+}
+
+// ════════════════════════════════════════════
+// UPLOAD — sélection, compression, envoi
+// ════════════════════════════════════════════
+function openUpload(eventId) {
+  currentEventId = eventId;
+  selectedFiles = [];
+  const ev = allEvents[eventId];
+  document.getElementById('upload-event-name').textContent = ev ? ev.name : 'Soirée';
+  document.getElementById('upload-event-date').textContent = ev ? fmtDateShort(ev.date) : '';
+  document.getElementById('preview-grid').style.display = 'none';
+  document.getElementById('preview-grid').innerHTML = '';
+  document.getElementById('upload-progress').style.display = 'none';
+  document.getElementById('upload-msg').style.display = 'none';
+  document.getElementById('upload-msg').className = 'upload-msg';
+  document.getElementById('upload-btn').disabled = true;
+  document.getElementById('upload-btn-text').textContent = '📤 Envoyer mes photos';
+  document.getElementById('file-input').value = '';
+  showPage('upload');
+}
+
+// Écoute la sélection de fichiers
+document.getElementById('file-input').addEventListener('change', function(e) {
+  handleFiles(Array.from(e.target.files));
+});
+
+// Drag & drop sur desktop
+const uploadZone = document.getElementById('upload-zone');
+uploadZone.addEventListener('dragover', e => { e.preventDefault(); uploadZone.classList.add('drag-over'); });
+uploadZone.addEventListener('dragleave', () => uploadZone.classList.remove('drag-over'));
+uploadZone.addEventListener('drop', e => {
+  e.preventDefault();
+  uploadZone.classList.remove('drag-over');
+  handleFiles(Array.from(e.dataTransfer.files).filter(f => f.type.startsWith('image/')));
+});
+
+function handleFiles(files) {
+  if (!files.length) return;
+  // Limite à 10 photos par envoi
+  const toProcess = files.slice(0, 10);
+  selectedFiles = [];
+  document.getElementById('preview-grid').innerHTML = '';
+  document.getElementById('upload-msg').style.display = 'none';
+
+  let done = 0;
+  toProcess.forEach(file => {
+    compressImage(file, 1200, 0.78).then(dataUrl => {
+      selectedFiles.push({ file, dataUrl });
+      done++;
+      renderPreviews();
+      if (done === toProcess.length) {
+        document.getElementById('upload-btn').disabled = false;
+      }
+    });
+  });
+}
+
+function renderPreviews() {
+  const grid = document.getElementById('preview-grid');
+  grid.style.display = 'grid';
+  grid.innerHTML = '';
+  const show = Math.min(selectedFiles.length, 6);
+  for (let i = 0; i < show; i++) {
+    const item = document.createElement('div');
+    item.className = 'preview-item';
+    if (i === 5 && selectedFiles.length > 6) {
+      item.innerHTML = `<img src="${selectedFiles[i].dataUrl}" alt=""><div class="preview-count-badge">+${selectedFiles.length - 5}</div>`;
+    } else {
+      item.innerHTML = `<img src="${selectedFiles[i].dataUrl}" alt=""><button class="preview-remove" onclick="removePreview(${i})">✕</button>`;
+    }
+    grid.appendChild(item);
+  }
+}
+
+function removePreview(index) {
+  selectedFiles.splice(index, 1);
+  if (selectedFiles.length === 0) {
+    document.getElementById('preview-grid').style.display = 'none';
+    document.getElementById('upload-btn').disabled = true;
+  } else {
+    renderPreviews();
+  }
+}
+
+// Compression canvas — convertit en JPEG max 1200px
+function compressImage(file, maxPx, quality) {
+  return new Promise(resolve => {
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxPx || h > maxPx) {
+          if (w > h) { h = Math.round(h * maxPx / w); w = maxPx; }
+          else { w = Math.round(w * maxPx / h); h = maxPx; }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+async function uploadPhotos() {
+  if (!selectedFiles.length || !currentEventId) return;
+  const btn = document.getElementById('upload-btn');
+  const btnText = document.getElementById('upload-btn-text');
+  const progressWrap = document.getElementById('upload-progress');
+  const progressBar = document.getElementById('progress-bar');
+  const progressLabel = document.getElementById('progress-label');
+  const msgEl = document.getElementById('upload-msg');
+
+  btn.disabled = true;
+  progressWrap.style.display = 'block';
+  msgEl.style.display = 'none';
+
+  let done = 0;
+  const total = selectedFiles.length;
+  let errors = 0;
+
+  for (const item of selectedFiles) {
+    try {
+      progressLabel.textContent = `Envoi ${done + 1} / ${total}…`;
+      progressBar.style.width = Math.round((done / total) * 100) + '%';
+
+      // Vérification taille (Firebase Realtime DB : valeur max ~10MB)
+      const sizeKB = Math.round(item.dataUrl.length * 0.75 / 1024);
+      if (sizeKB > 800) {
+        // Recompresse plus fort si trop grand
+        item.dataUrl = await compressImage(item.file, 900, 0.65);
+      }
+
+      await db.ref('photos').push({
+        eventId: currentEventId,
+        dataUrl: item.dataUrl,
+        status: 'pending',        // pending | approved | refused
+        uploadedAt: Date.now()
+      });
+      done++;
+    } catch (err) {
+      console.error('Upload error:', err);
+      errors++;
+      done++;
+    }
+  }
+
+  progressBar.style.width = '100%';
+  progressLabel.textContent = 'Terminé !';
+
+  if (errors === 0) {
+    msgEl.className = 'upload-msg success';
+    msgEl.textContent = `✅ ${total} photo${total > 1 ? 's' : ''} envoyée${total > 1 ? 's' : ''} ! Elles seront visibles après validation.`;
+  } else {
+    msgEl.className = 'upload-msg error';
+    msgEl.textContent = `⚠️ ${done - errors}/${total} photo${total > 1 ? 's' : ''} envoyée${total > 1 ? 's' : ''}. ${errors} erreur${errors > 1 ? 's' : ''}.`;
+  }
+  msgEl.style.display = 'block';
+  btnText.textContent = '✅ Envoyé !';
+  selectedFiles = [];
+  document.getElementById('preview-grid').style.display = 'none';
+  setTimeout(() => { progressWrap.style.display = 'none'; }, 2000);
+}
+
+// ════════════════════════════════════════════
+// GALERIE PUBLIQUE — photos approuvées
+// ════════════════════════════════════════════
+function openGallery(eventId) {
+  currentEventId = eventId;
+  const ev = allEvents[eventId];
+  document.getElementById('gallery-event-name').textContent = ev ? ev.name : 'Soirée';
+  document.getElementById('gallery-event-date').textContent = ev ? fmtDateShort(ev.date) : '';
+  document.getElementById('gallery-stats').innerHTML = '';
+  document.getElementById('photo-grid').innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  showPage('gallery');
+  loadGallery(eventId);
+}
+
+function loadGallery(eventId) {
+  db.ref('photos').orderByChild('eventId').equalTo(eventId).once('value').then(snap => {
+    const all = snap.val() || {};
+    const approved = Object.entries(all)
+      .filter(([, p]) => p.status === 'approved')
+      .sort((a, b) => b[1].uploadedAt - a[1].uploadedAt);
+
+    // Stats
+    const total = Object.keys(all).length;
+    document.getElementById('gallery-stats').innerHTML = `
+      <div class="gallery-stat"><div class="gallery-stat-num">${approved.length}</div><div class="gallery-stat-label">Photos publiées</div></div>
+      <div class="gallery-stat"><div class="gallery-stat-num">${total}</div><div class="gallery-stat-label">Soumises au total</div></div>`;
+
+    const grid = document.getElementById('photo-grid');
+    if (approved.length === 0) {
+      grid.innerHTML = '<div class="empty-state" style="grid-column:1/-1"><div class="empty-icon">📷</div><p>Aucune photo publiée pour cette soirée.</p></div>';
+      return;
+    }
+
+    // Prépare les URLs pour le lightbox
+    lbPhotos = approved.map(([, p]) => p.dataUrl);
+    grid.innerHTML = '';
+    approved.forEach(([, photo], i) => {
+      const thumb = document.createElement('div');
+      thumb.className = 'photo-thumb';
+      thumb.innerHTML = `<img src="${photo.dataUrl}" alt="Photo soirée" loading="lazy">`;
+      thumb.onclick = () => openLightbox(i);
+      grid.appendChild(thumb);
+    });
+
+    // Swipe mobile sur la galerie
+    grid.addEventListener('touchstart', e => { touchStartX = e.touches[0].clientX; }, { passive: true });
+  }).catch(() => {
+    document.getElementById('photo-grid').innerHTML = '<div class="empty-state" style="grid-column:1/-1"><p>Erreur de chargement.</p></div>';
+  });
+}
+
+// ════════════════════════════════════════════
+// LIGHTBOX
+// ════════════════════════════════════════════
+function openLightbox(index) {
+  lbIndex = index;
+  const lb = document.getElementById('lightbox');
+  lb.classList.add('open');
+  updateLightbox();
+
+  // Swipe mobile
+  lb.addEventListener('touchstart', lbTouchStart, { passive: true });
+  lb.addEventListener('touchend', lbTouchEnd);
+}
+
+function lbTouchStart(e) { touchStartX = e.touches[0].clientX; }
+function lbTouchEnd(e) {
+  const diff = touchStartX - e.changedTouches[0].clientX;
+  if (Math.abs(diff) > 50) lbNav(diff > 0 ? 1 : -1);
+}
+
+function updateLightbox() {
+  document.getElementById('lightbox-img').src = lbPhotos[lbIndex];
+  document.getElementById('lightbox-counter').textContent = (lbIndex + 1) + ' / ' + lbPhotos.length;
+}
+
+function lbNav(dir) {
+  lbIndex = (lbIndex + dir + lbPhotos.length) % lbPhotos.length;
+  updateLightbox();
+}
+
+function closeLightbox(e) {
+  if (e && e.target !== document.getElementById('lightbox') && !e.target.classList.contains('lightbox-close')) return;
+  if (!e) {
+    document.getElementById('lightbox').classList.remove('open');
+    return;
+  }
+  document.getElementById('lightbox').classList.remove('open');
+}
+
+// Touche Echap & flèches clavier
+document.addEventListener('keydown', e => {
+  if (!document.getElementById('lightbox').classList.contains('open')) return;
+  if (e.key === 'Escape') document.getElementById('lightbox').classList.remove('open');
+  if (e.key === 'ArrowRight') lbNav(1);
+  if (e.key === 'ArrowLeft') lbNav(-1);
+});
+
+// ════════════════════════════════════════════
+// ADMIN — chargement et modération
+// ════════════════════════════════════════════
+function loadAdminPhotos() {
+  const list = document.getElementById('photo-mod-list');
+  list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+
+  // Charge les soirées pour le filtre
+  db.ref('events').once('value').then(snap => {
+    allEvents = snap.val() || {};
+    const sel = document.getElementById('filter-event');
+    sel.innerHTML = '<option value="">Toutes les soirées</option>';
+    Object.entries(allEvents).sort((a, b) => new Date(b[1].date) - new Date(a[1].date)).forEach(([id, ev]) => {
+      sel.innerHTML += `<option value="${id}">${ev.name} — ${fmtDateShort(ev.date)}</option>`;
+    });
+  });
+
+  // Charge toutes les photos en temps réel
+  db.ref('photos').on('value', snap => {
+    adminPhotos = snap.val() || {};
+    updatePendingBadge();
+    renderAdminPhotos();
+  });
+}
+
+function updatePendingBadge() {
+  const pending = Object.values(adminPhotos).filter(p => p.status === 'pending').length;
+  const badge = document.getElementById('badge-pending');
+  if (pending > 0) { badge.textContent = pending; badge.style.display = 'inline'; }
+  else { badge.style.display = 'none'; }
+}
+
+function switchTab(tab) {
+  currentTab = tab;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + tab).classList.add('active');
+  renderAdminPhotos();
+}
+
+function renderAdminPhotos() {
+  const list = document.getElementById('photo-mod-list');
+  const filterEvent = document.getElementById('filter-event').value;
+
+  let photos = Object.entries(adminPhotos)
+    .filter(([, p]) => p.status === currentTab)
+    .filter(([, p]) => !filterEvent || p.eventId === filterEvent)
+    .sort((a, b) => b[1].uploadedAt - a[1].uploadedAt);
+
+  if (photos.length === 0) {
+    list.innerHTML = '<div class="empty-state"><div class="empty-icon">' +
+      (currentTab === 'pending' ? '🎉' : currentTab === 'approved' ? '✅' : '🗑️') +
+      '</div><p>' +
+      (currentTab === 'pending' ? 'Aucune photo en attente.' : currentTab === 'approved' ? 'Aucune photo approuvée.' : 'Aucune photo refusée.') +
+      '</p></div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  photos.forEach(([photoId, photo]) => {
+    const evName = allEvents[photo.eventId] ? allEvents[photo.eventId].name : 'Soirée inconnue';
+    const item = document.createElement('div');
+    item.className = 'photo-mod-item';
+    item.innerHTML = `
+      <div class="photo-mod-img-wrap">
+        <img src="${photo.dataUrl}" alt="Photo" loading="lazy">
+      </div>
+      <div class="photo-mod-meta">
+        <div class="photo-mod-event">${evName}</div>
+        <div class="photo-mod-date">Soumis le ${fmtDateTime(photo.uploadedAt)}</div>
+      </div>
+      <div class="photo-mod-actions">
+        ${currentTab === 'pending' ? `
+          <button class="btn-approve" onclick="moderatePhoto('${photoId}','approved')">✅ Approuver</button>
+          <button class="btn-refuse" onclick="moderatePhoto('${photoId}','refused')">✕ Refuser</button>
+        ` : currentTab === 'approved' ? `
+          <button class="btn-refuse" onclick="moderatePhoto('${photoId}','refused')">Dépublier</button>
+          <button class="btn-delete-photo" onclick="deletePhoto('${photoId}')">Supprimer</button>
+        ` : `
+          <button class="btn-approve" onclick="moderatePhoto('${photoId}','approved')">Ré-approuver</button>
+          <button class="btn-delete-photo" onclick="deletePhoto('${photoId}')">Supprimer</button>
+        `}
+      </div>`;
+    list.appendChild(item);
+  });
+}
+
+function moderatePhoto(photoId, newStatus) {
+  db.ref('photos/' + photoId).update({ status: newStatus })
+    .then(() => showToast(newStatus === 'approved' ? '✅ Photo approuvée !' : '🗑️ Photo refusée', newStatus === 'approved' ? 'success' : ''))
+    .catch(err => showToast('Erreur : ' + err.message, 'error'));
+}
+
+function deletePhoto(photoId) {
+  if (!confirm('Supprimer définitivement cette photo ?')) return;
+  db.ref('photos/' + photoId).remove()
+    .then(() => showToast('Photo supprimée', 'success'))
+    .catch(err => showToast('Erreur : ' + err.message, 'error'));
+}
+
+// ════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ' ' + type : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+function fmtDateShort(d) {
+  if (!d) return '';
+  const dt = new Date(d + 'T12:00:00');
+  return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function fmtDateTime(ts) {
+  if (!ts) return '';
+  return new Date(ts).toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+}
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+loadHomeEvents();
+</script>
+</body>
+</html>
