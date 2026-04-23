@@ -61,6 +61,17 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
 .empty-state p{color:var(--muted);font-size:15px;line-height:1.7;}
 .empty-icon{font-size:40px;margin-bottom:16px;}
 
+.past-toggle{max-width:600px;margin:0 auto;padding:0 20px 8px;}
+.past-toggle-btn{display:flex;align-items:center;gap:8px;background:none;border:0.5px solid var(--border);border-radius:10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 14px;cursor:pointer;transition:color 0.2s,border-color 0.2s,background 0.2s;width:100%;}
+.past-toggle-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.18);background:var(--surface);}
+.past-toggle-arrow{margin-left:auto;font-size:11px;transition:transform 0.25s ease;}
+.past-toggle-arrow.open{transform:rotate(180deg);}
+.past-count{background:var(--surface2);border-radius:20px;padding:2px 8px;font-size:11px;}
+.past-events-wrap{max-width:600px;margin:0 auto;padding:0 20px;display:flex;flex-direction:column;gap:20px;overflow:hidden;max-height:0;transition:max-height 0.4s ease,padding 0.3s ease,opacity 0.3s ease;opacity:0;}
+.past-events-wrap.open{max-height:5000px;opacity:1;padding-bottom:40px;}
+.event-card.past-card{opacity:0.6;filter:grayscale(30%);}
+.event-card.past-card:hover{opacity:0.85;filter:grayscale(0%);}
+
 .detail-cover-wrap{width:100%;height:260px;position:relative;overflow:hidden;}
 .detail-cover-img{width:100%;height:100%;object-fit:cover;}
 .detail-cover-placeholder{width:100%;height:100%;background:linear-gradient(160deg,#1a1030 0%,#0d0820 60%,#0a0a0f 100%);position:relative;}
@@ -114,9 +125,6 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
 .btn-inner{display:flex;align-items:center;justify-content:center;gap:8px;}
 .ck{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:11px;}
 .btn-hint{text-align:center;font-size:12px;color:var(--muted);margin-top:8px;}
-.btn-share{width:100%;background:transparent;border:0.5px solid rgba(255,255,255,0.15);border-radius:14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;padding:14px;cursor:pointer;transition:background 0.2s,border-color 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;}
-.btn-share:hover{background:var(--surface2);border-color:rgba(255,255,255,0.25);}
-.btn-share:active{transform:scale(0.98);}
 
 .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,0.2);transform:scale(0);animation:rpl 0.5s linear;pointer-events:none;}
 @keyframes rpl{to{transform:scale(4);opacity:0;}}
@@ -458,6 +466,33 @@ function fmtDateShort(d) {
 function initial(name) { return name ? name.charAt(0).toUpperCase() : '?'; }
 
 // ── HOME ──
+function buildEventCard(id, ev, isPast, index) {
+  const status = getStatus(ev);
+  const tags = ev.ambiances ? ev.ambiances.split(',').map(a => a.trim()).filter(Boolean) : [];
+  const card = document.createElement('div');
+  card.className = 'event-card anim' + (isPast ? ' past-card' : '');
+  card.style.animationDelay = (index * 0.07) + 's';
+  card.innerHTML =
+    (ev.cover
+      ? `<img class="card-cover" src="${ev.cover}" alt="${ev.name}" onerror="this.outerHTML='<div class=\\'card-cover-placeholder\\'><div class=\\'placeholder-title\\'>${ev.name}</div></div>'">`
+      : `<div class="card-cover-placeholder"><div class="placeholder-title">${ev.name}</div></div>`) +
+    `<div class="card-body">
+      <div class="card-top">
+        <div class="card-name">${ev.name}</div>
+        <span class="card-status status-${status}">${statusLabel(status)}</span>
+      </div>
+      <div class="card-meta">
+        <span class="card-assoc">${ev.association || 'Bar ECAM'}</span>
+        <div class="card-dot"></div>
+        <span class="card-date">${fmtDateShort(ev.date)}</span>
+        ${ev.startTime ? `<div class="card-dot"></div><span class="card-time">${ev.startTime}${ev.endTime ? ' → ' + ev.endTime : ''}</span>` : ''}
+      </div>
+      ${tags.length ? `<div class="card-tags">${tags.slice(0, 4).map(t => `<span class="card-tag">${t}</span>`).join('')}</div>` : ''}
+    </div>`;
+  card.onclick = () => openEvent(id);
+  return card;
+}
+
 function loadHomeEvents() {
   const list = document.getElementById('events-list');
   list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -465,48 +500,66 @@ function loadHomeEvents() {
   db.ref('events').once('value')
     .then(snap => {
       allEvents = snap.val() || {};
-      const sorted = Object.entries(allEvents).sort((a, b) => {
-        return new Date(a[1].date + 'T' + (a[1].startTime || '00:00'))
-             - new Date(b[1].date + 'T' + (b[1].startTime || '00:00'));
+
+      const upcoming = [], past = [];
+      Object.entries(allEvents).forEach(([id, ev]) => {
+        (getStatus(ev) === 'past' ? past : upcoming).push([id, ev]);
       });
 
-      if (sorted.length === 0) {
+      // Tri : à venir → chronologique, passées → plus récente en premier
+      upcoming.sort((a, b) =>
+        new Date(a[1].date + 'T' + (a[1].startTime || '00:00')) -
+        new Date(b[1].date + 'T' + (b[1].startTime || '00:00'))
+      );
+      past.sort((a, b) =>
+        new Date(b[1].date + 'T' + (b[1].startTime || '00:00')) -
+        new Date(a[1].date + 'T' + (a[1].startTime || '00:00'))
+      );
+
+      list.innerHTML = '';
+
+      if (upcoming.length === 0 && past.length === 0) {
         list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><p>Aucune soirée pour le moment.<br>Revenez bientôt !</p></div>';
         return;
       }
 
-      list.innerHTML = '';
-      sorted.forEach(([id, ev], i) => {
-        const status = getStatus(ev);
-        const tags = ev.ambiances ? ev.ambiances.split(',').map(a => a.trim()).filter(Boolean) : [];
-        const card = document.createElement('div');
-        card.className = 'event-card anim';
-        card.style.animationDelay = (i * 0.07) + 's';
-        card.innerHTML =
-          (ev.cover
-            ? `<img class="card-cover" src="${ev.cover}" alt="${ev.name}" onerror="this.outerHTML='<div class=\\'card-cover-placeholder\\'><div class=\\'placeholder-title\\'>${ev.name}</div></div>'">`
-            : `<div class="card-cover-placeholder"><div class="placeholder-title">${ev.name}</div></div>`) +
-          `<div class="card-body">
-            <div class="card-top">
-              <div class="card-name">${ev.name}</div>
-              <span class="card-status status-${status}">${statusLabel(status)}</span>
-            </div>
-            <div class="card-meta">
-              <span class="card-assoc">${ev.association || 'Bar ECAM'}</span>
-              <div class="card-dot"></div>
-              <span class="card-date">${fmtDateShort(ev.date)}</span>
-              ${ev.startTime ? `<div class="card-dot"></div><span class="card-time">${ev.startTime}${ev.endTime ? ' → ' + ev.endTime : ''}</span>` : ''}
-            </div>
-            ${tags.length ? `<div class="card-tags">${tags.slice(0, 4).map(t => `<span class="card-tag">${t}</span>`).join('')}</div>` : ''}
-          </div>`;
-        card.onclick = () => openEvent(id);
-        list.appendChild(card);
-      });
+      if (upcoming.length === 0) {
+        list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><p>Aucune soirée à venir pour le moment.<br>Revenez bientôt !</p></div>';
+      } else {
+        upcoming.forEach(([id, ev], i) => list.appendChild(buildEventCard(id, ev, false, i)));
+      }
+
+      // Section soirées passées repliable
+      if (past.length > 0) {
+        const toggleWrap = document.createElement('div');
+        toggleWrap.className = 'past-toggle';
+        toggleWrap.innerHTML =
+          `<button class="past-toggle-btn" id="past-toggle-btn" onclick="togglePast()">
+            <span>🕘 Soirées passées</span>
+            <span class="past-count">${past.length}</span>
+            <span class="past-toggle-arrow" id="past-arrow">▼</span>
+          </button>`;
+        list.appendChild(toggleWrap);
+
+        const pastWrap = document.createElement('div');
+        pastWrap.className = 'past-events-wrap';
+        pastWrap.id = 'past-events-wrap';
+        past.forEach(([id, ev], i) => pastWrap.appendChild(buildEventCard(id, ev, true, i)));
+        list.appendChild(pastWrap);
+      }
     })
     .catch(err => {
       list.innerHTML = '<div class="empty-state"><p>Erreur de connexion.<br>Vérifie ta connexion internet.</p></div>';
       console.error('Firebase error:', err);
     });
+}
+
+function togglePast() {
+  const wrap = document.getElementById('past-events-wrap');
+  const arrow = document.getElementById('past-arrow');
+  if (!wrap) return;
+  wrap.classList.toggle('open');
+  arrow.classList.toggle('open');
 }
 
 // ── DETAIL ──
@@ -571,10 +624,6 @@ function renderDetail(id, ev) {
       <div class="cta-sticky-inner">
         <button class="btn" id="cta-btn" onclick="handleComing(event,'${id}')">
           <span class="btn-inner" id="cta-inner">Je compte venir</span>
-        </button>
-        <button class="btn-share" onclick="shareEvent('${id}')">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
-          Partager cette soirée
         </button>
         <div class="btn-hint" id="cta-hint">Un simple clic · Pas d'inscription requise</div>
       </div>
@@ -771,52 +820,6 @@ document.getElementById('modal-edit').addEventListener('click', function(e) {
 
 // Init
 loadHomeEvents();
-
-// ── PARTAGE ──
-function shareEvent(id) {
-  const ev = allEvents[id];
-  if (!ev) return;
-  const url = window.location.origin + window.location.pathname + '?event=' + id;
-  const shareText = ev.name + ' — ' + fmtDateShort(ev.date) + (ev.startTime ? ' · ' + ev.startTime : '') + '\nBar ECAM Bruz';
-  if (navigator.share) {
-    navigator.share({ title: ev.name, text: shareText, url: url }).catch(function() {});
-  } else {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url)
-        .then(function() { showToast('Lien copié !', 'success'); })
-        .catch(function() { fallbackCopy(url); });
-    } else {
-      fallbackCopy(url);
-    }
-  }
-}
-
-function fallbackCopy(text) {
-  var ta = document.createElement('textarea');
-  ta.value = text;
-  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
-  document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
-  try { document.execCommand('copy'); showToast('Lien copié !', 'success'); }
-  catch(e) { showToast('Impossible de copier', 'error'); }
-  document.body.removeChild(ta);
-}
-
-// ── LIEN DIRECT — ouvre la soirée si ?event=ID dans l'URL ──
-(function() {
-  var params = new URLSearchParams(window.location.search);
-  var eventId = params.get('event');
-  if (!eventId) return;
-  db.ref('events/' + eventId).once('value')
-    .then(function(snap) {
-      var ev = snap.val();
-      if (!ev) return;
-      allEvents[eventId] = ev;
-      openEvent(eventId);
-    })
-    .catch(function() {});
-})();
 </script>
 </body>
 </html>
