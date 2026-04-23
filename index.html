@@ -10,6 +10,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
+<!-- OneSignal SDK — notifications push -->
+<script src="https://cdn.onesignal.com/sdks/web/v16/OneSignalSDK.page.js" defer></script>
+
 <style>
 :root{
   --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;
@@ -61,16 +64,14 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
 .empty-state p{color:var(--muted);font-size:15px;line-height:1.7;}
 .empty-icon{font-size:40px;margin-bottom:16px;}
 
-.past-toggle{max-width:600px;margin:0 auto;padding:0 20px 8px;}
-.past-toggle-btn{display:flex;align-items:center;gap:8px;background:none;border:0.5px solid var(--border);border-radius:10px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;padding:9px 14px;cursor:pointer;transition:color 0.2s,border-color 0.2s,background 0.2s;width:100%;}
-.past-toggle-btn:hover{color:var(--text);border-color:rgba(255,255,255,0.18);background:var(--surface);}
-.past-toggle-arrow{margin-left:auto;font-size:11px;transition:transform 0.25s ease;}
-.past-toggle-arrow.open{transform:rotate(180deg);}
-.past-count{background:var(--surface2);border-radius:20px;padding:2px 8px;font-size:11px;}
-.past-events-wrap{max-width:600px;margin:0 auto;padding:0 20px;display:flex;flex-direction:column;gap:20px;overflow:hidden;max-height:0;transition:max-height 0.4s ease,padding 0.3s ease,opacity 0.3s ease;opacity:0;}
-.past-events-wrap.open{max-height:5000px;opacity:1;padding-bottom:40px;}
-.event-card.past-card{opacity:0.6;filter:grayscale(30%);}
-.event-card.past-card:hover{opacity:0.85;filter:grayscale(0%);}
+.notif-banner{max-width:600px;margin:0 auto 4px;padding:0 20px;}
+.notif-btn{width:100%;background:var(--surface);border:0.5px solid var(--border);border-radius:14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:13px 16px;cursor:pointer;transition:border-color 0.2s,background 0.2s;display:flex;align-items:center;gap:10px;}
+.notif-btn:hover{border-color:rgba(123,110,246,0.35);background:var(--surface2);}
+.notif-btn.active{border-color:rgba(76,175,130,0.4);color:#4CAF82;}
+.notif-btn.active:hover{background:var(--surface);}
+.notif-icon{font-size:18px;flex-shrink:0;}
+.notif-text{flex:1;text-align:left;}
+.notif-sub{font-size:11px;color:var(--muted);margin-top:1px;}
 
 .detail-cover-wrap{width:100%;height:260px;position:relative;overflow:hidden;}
 .detail-cover-img{width:100%;height:100%;object-fit:cover;}
@@ -125,6 +126,9 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
 .btn-inner{display:flex;align-items:center;justify-content:center;gap:8px;}
 .ck{width:20px;height:20px;border-radius:50%;background:rgba(255,255,255,0.25);display:flex;align-items:center;justify-content:center;font-size:11px;}
 .btn-hint{text-align:center;font-size:12px;color:var(--muted);margin-top:8px;}
+.btn-share{width:100%;background:transparent;border:0.5px solid rgba(255,255,255,0.15);border-radius:14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;padding:14px;cursor:pointer;transition:background 0.2s,border-color 0.2s;display:flex;align-items:center;justify-content:center;gap:8px;margin-top:10px;}
+.btn-share:hover{background:var(--surface2);border-color:rgba(255,255,255,0.25);}
+.btn-share:active{transform:scale(0.98);}
 
 .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,0.2);transform:scale(0);animation:rpl 0.5s linear;pointer-events:none;}
 @keyframes rpl{to{transform:scale(4);opacity:0;}}
@@ -210,6 +214,15 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
   <div class="home-header anim">
     <div class="home-title">Bar étudiant · ECAM Bruz</div>
     <div class="home-sub">Prochaines <span>soirées</span></div>
+  </div>
+  <div class="notif-banner anim" id="notif-banner" style="display:none;">
+    <button class="notif-btn" id="notif-btn" onclick="toggleNotifications()">
+      <span class="notif-icon">🔔</span>
+      <div class="notif-text">
+        <div id="notif-label">Recevoir les alertes soirées</div>
+        <div class="notif-sub" id="notif-sublabel">Sois notifié dès qu'une nouvelle soirée est ajoutée</div>
+      </div>
+    </button>
   </div>
   <div class="events-list" id="events-list">
     <div class="loading"><div class="spinner"></div></div>
@@ -466,33 +479,6 @@ function fmtDateShort(d) {
 function initial(name) { return name ? name.charAt(0).toUpperCase() : '?'; }
 
 // ── HOME ──
-function buildEventCard(id, ev, isPast, index) {
-  const status = getStatus(ev);
-  const tags = ev.ambiances ? ev.ambiances.split(',').map(a => a.trim()).filter(Boolean) : [];
-  const card = document.createElement('div');
-  card.className = 'event-card anim' + (isPast ? ' past-card' : '');
-  card.style.animationDelay = (index * 0.07) + 's';
-  card.innerHTML =
-    (ev.cover
-      ? `<img class="card-cover" src="${ev.cover}" alt="${ev.name}" onerror="this.outerHTML='<div class=\\'card-cover-placeholder\\'><div class=\\'placeholder-title\\'>${ev.name}</div></div>'">`
-      : `<div class="card-cover-placeholder"><div class="placeholder-title">${ev.name}</div></div>`) +
-    `<div class="card-body">
-      <div class="card-top">
-        <div class="card-name">${ev.name}</div>
-        <span class="card-status status-${status}">${statusLabel(status)}</span>
-      </div>
-      <div class="card-meta">
-        <span class="card-assoc">${ev.association || 'Bar ECAM'}</span>
-        <div class="card-dot"></div>
-        <span class="card-date">${fmtDateShort(ev.date)}</span>
-        ${ev.startTime ? `<div class="card-dot"></div><span class="card-time">${ev.startTime}${ev.endTime ? ' → ' + ev.endTime : ''}</span>` : ''}
-      </div>
-      ${tags.length ? `<div class="card-tags">${tags.slice(0, 4).map(t => `<span class="card-tag">${t}</span>`).join('')}</div>` : ''}
-    </div>`;
-  card.onclick = () => openEvent(id);
-  return card;
-}
-
 function loadHomeEvents() {
   const list = document.getElementById('events-list');
   list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
@@ -500,66 +486,48 @@ function loadHomeEvents() {
   db.ref('events').once('value')
     .then(snap => {
       allEvents = snap.val() || {};
-
-      const upcoming = [], past = [];
-      Object.entries(allEvents).forEach(([id, ev]) => {
-        (getStatus(ev) === 'past' ? past : upcoming).push([id, ev]);
+      const sorted = Object.entries(allEvents).sort((a, b) => {
+        return new Date(a[1].date + 'T' + (a[1].startTime || '00:00'))
+             - new Date(b[1].date + 'T' + (b[1].startTime || '00:00'));
       });
 
-      // Tri : à venir → chronologique, passées → plus récente en premier
-      upcoming.sort((a, b) =>
-        new Date(a[1].date + 'T' + (a[1].startTime || '00:00')) -
-        new Date(b[1].date + 'T' + (b[1].startTime || '00:00'))
-      );
-      past.sort((a, b) =>
-        new Date(b[1].date + 'T' + (b[1].startTime || '00:00')) -
-        new Date(a[1].date + 'T' + (a[1].startTime || '00:00'))
-      );
-
-      list.innerHTML = '';
-
-      if (upcoming.length === 0 && past.length === 0) {
+      if (sorted.length === 0) {
         list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><p>Aucune soirée pour le moment.<br>Revenez bientôt !</p></div>';
         return;
       }
 
-      if (upcoming.length === 0) {
-        list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><p>Aucune soirée à venir pour le moment.<br>Revenez bientôt !</p></div>';
-      } else {
-        upcoming.forEach(([id, ev], i) => list.appendChild(buildEventCard(id, ev, false, i)));
-      }
-
-      // Section soirées passées repliable
-      if (past.length > 0) {
-        const toggleWrap = document.createElement('div');
-        toggleWrap.className = 'past-toggle';
-        toggleWrap.innerHTML =
-          `<button class="past-toggle-btn" id="past-toggle-btn" onclick="togglePast()">
-            <span>🕘 Soirées passées</span>
-            <span class="past-count">${past.length}</span>
-            <span class="past-toggle-arrow" id="past-arrow">▼</span>
-          </button>`;
-        list.appendChild(toggleWrap);
-
-        const pastWrap = document.createElement('div');
-        pastWrap.className = 'past-events-wrap';
-        pastWrap.id = 'past-events-wrap';
-        past.forEach(([id, ev], i) => pastWrap.appendChild(buildEventCard(id, ev, true, i)));
-        list.appendChild(pastWrap);
-      }
+      list.innerHTML = '';
+      sorted.forEach(([id, ev], i) => {
+        const status = getStatus(ev);
+        const tags = ev.ambiances ? ev.ambiances.split(',').map(a => a.trim()).filter(Boolean) : [];
+        const card = document.createElement('div');
+        card.className = 'event-card anim';
+        card.style.animationDelay = (i * 0.07) + 's';
+        card.innerHTML =
+          (ev.cover
+            ? `<img class="card-cover" src="${ev.cover}" alt="${ev.name}" onerror="this.outerHTML='<div class=\\'card-cover-placeholder\\'><div class=\\'placeholder-title\\'>${ev.name}</div></div>'">`
+            : `<div class="card-cover-placeholder"><div class="placeholder-title">${ev.name}</div></div>`) +
+          `<div class="card-body">
+            <div class="card-top">
+              <div class="card-name">${ev.name}</div>
+              <span class="card-status status-${status}">${statusLabel(status)}</span>
+            </div>
+            <div class="card-meta">
+              <span class="card-assoc">${ev.association || 'Bar ECAM'}</span>
+              <div class="card-dot"></div>
+              <span class="card-date">${fmtDateShort(ev.date)}</span>
+              ${ev.startTime ? `<div class="card-dot"></div><span class="card-time">${ev.startTime}${ev.endTime ? ' → ' + ev.endTime : ''}</span>` : ''}
+            </div>
+            ${tags.length ? `<div class="card-tags">${tags.slice(0, 4).map(t => `<span class="card-tag">${t}</span>`).join('')}</div>` : ''}
+          </div>`;
+        card.onclick = () => openEvent(id);
+        list.appendChild(card);
+      });
     })
     .catch(err => {
       list.innerHTML = '<div class="empty-state"><p>Erreur de connexion.<br>Vérifie ta connexion internet.</p></div>';
       console.error('Firebase error:', err);
     });
-}
-
-function togglePast() {
-  const wrap = document.getElementById('past-events-wrap');
-  const arrow = document.getElementById('past-arrow');
-  if (!wrap) return;
-  wrap.classList.toggle('open');
-  arrow.classList.toggle('open');
 }
 
 // ── DETAIL ──
@@ -624,6 +592,10 @@ function renderDetail(id, ev) {
       <div class="cta-sticky-inner">
         <button class="btn" id="cta-btn" onclick="handleComing(event,'${id}')">
           <span class="btn-inner" id="cta-inner">Je compte venir</span>
+        </button>
+        <button class="btn-share" onclick="shareEvent('${id}')">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+          Partager cette soirée
         </button>
         <div class="btn-hint" id="cta-hint">Un simple clic · Pas d'inscription requise</div>
       </div>
@@ -743,6 +715,7 @@ function addEvent() {
   db.ref('events').push(data)
     .then(() => {
       showToast('Soirée ajoutée !', 'success');
+      sendPushNotification(data.name, data.date, data.startTime);
       ['f-name','f-date','f-start','f-end','f-cover','f-desc','f-ambiances','f-lineup'].forEach(id => {
         document.getElementById(id).value = '';
       });
@@ -820,6 +793,122 @@ document.getElementById('modal-edit').addEventListener('click', function(e) {
 
 // Init
 loadHomeEvents();
+
+// ── PARTAGE ──
+function shareEvent(id) {
+  const ev = allEvents[id];
+  if (!ev) return;
+  const url = window.location.origin + window.location.pathname + '?event=' + id;
+  const shareText = ev.name + ' — ' + fmtDateShort(ev.date) + (ev.startTime ? ' · ' + ev.startTime : '') + '\nBar ECAM Bruz';
+  if (navigator.share) {
+    navigator.share({ title: ev.name, text: shareText, url: url }).catch(function() {});
+  } else {
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(url)
+        .then(function() { showToast('Lien copié !', 'success'); })
+        .catch(function() { fallbackCopy(url); });
+    } else {
+      fallbackCopy(url);
+    }
+  }
+}
+
+function fallbackCopy(text) {
+  var ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
+  document.body.appendChild(ta);
+  ta.focus();
+  ta.select();
+  try { document.execCommand('copy'); showToast('Lien copié !', 'success'); }
+  catch(e) { showToast('Impossible de copier', 'error'); }
+  document.body.removeChild(ta);
+}
+
+// ── LIEN DIRECT — ouvre la soirée si ?event=ID dans l'URL ──
+(function() {
+  var params = new URLSearchParams(window.location.search);
+  var eventId = params.get('event');
+  if (!eventId) return;
+  db.ref('events/' + eventId).once('value')
+    .then(function(snap) {
+      var ev = snap.val();
+      if (!ev) return;
+      allEvents[eventId] = ev;
+      openEvent(eventId);
+    })
+    .catch(function() {});
+})();
+
+// ── ONESIGNAL — NOTIFICATIONS PUSH ──
+// ⚠️ REMPLACE ces deux valeurs par les tiennes (récupérées sur onesignal.com)
+var ONESIGNAL_APP_ID  = '330c2c53-e929-4e21-b90d-29d57f0a0098';
+var ONESIGNAL_REST_KEY = 'os_v2_app_gmgcyu7jffhcdoinfhkx6cqatdepveucv56urp4i7zj3mwt2bunds5thds3o2dq5pnnkiqqgijytwdilmh57cjzobxjk4kgskea7swy'; // ⚠️ À REMPLACER par ta REST API Key (Settings → Keys & IDs sur onesignal.com)
+
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+OneSignalDeferred.push(function(OneSignal) {
+  OneSignal.init({ appId: ONESIGNAL_APP_ID }).then(function() {
+    var banner = document.getElementById('notif-banner');
+    if (banner) banner.style.display = 'block';
+    updateNotifButton();
+  });
+});
+
+function updateNotifButton() {
+  var btn   = document.getElementById('notif-btn');
+  var label = document.getElementById('notif-label');
+  var sub   = document.getElementById('notif-sublabel');
+  if (!btn || !label || !sub) return;
+  if (Notification && Notification.permission === 'granted') {
+    btn.classList.add('active');
+    label.textContent = 'Notifications activées ✓';
+    sub.textContent   = 'Tu seras prévenu dès qu\'une nouvelle soirée est ajoutée';
+  } else {
+    btn.classList.remove('active');
+    label.textContent = 'Recevoir les alertes soirées';
+    sub.textContent   = 'Sois notifié dès qu\'une nouvelle soirée est ajoutée';
+  }
+}
+
+function toggleNotifications() {
+  if (typeof OneSignal === 'undefined') return;
+  if (Notification && Notification.permission === 'granted') {
+    showToast('Notifications déjà activées !', 'success');
+    return;
+  }
+  OneSignal.Notifications.requestPermission().then(function(accepted) {
+    if (accepted) {
+      showToast('Notifications activées !', 'success');
+    } else {
+      showToast('Permission refusée', 'error');
+    }
+    updateNotifButton();
+  }).catch(function() {
+    showToast('Erreur notifications', 'error');
+  });
+}
+
+function sendPushNotification(eventName, eventDate, startTime) {
+  if (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID === 'COLLE_TON_APP_ID_ICI') return;
+  var d = new Date(eventDate + 'T12:00:00');
+  var dateStr = d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+  var timeStr = startTime ? ' à ' + startTime : '';
+  var message = eventName + ' — ' + dateStr + timeStr;
+  fetch('https://onesignal.com/api/v1/notifications', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Basic ' + ONESIGNAL_REST_KEY
+    },
+    body: JSON.stringify({
+      app_id: ONESIGNAL_APP_ID,
+      included_segments: ['All'],
+      headings: { fr: '🎉 Nouvelle soirée — Bar ECAM Bruz' },
+      contents: { fr: message },
+      url: window.location.origin + window.location.pathname
+    })
+  }).catch(function() {});
+}
 </script>
 </body>
 </html>
