@@ -6,7 +6,7 @@
 <title>Bar ECAM Bruz</title>
 <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
 
-<!-- Firebase compat SDK — fonctionne partout sans serveur -->
+<!-- Firebase compat SDK -->
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
 
@@ -25,6 +25,7 @@ html{scroll-behavior:smooth;}
 body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
 .page{display:none;min-height:100vh;}.page.active{display:block;}
 
+/* NAV */
 nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-filter:blur(12px);border-bottom:0.5px solid var(--border);padding:0 20px;}
 .nav-inner{max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px;}
 .nav-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.05em;color:var(--text);cursor:pointer;}
@@ -32,15 +33,39 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
 .nav-admin-btn{font-size:12px;color:var(--muted);cursor:pointer;padding:6px 10px;border-radius:8px;transition:color 0.2s,background 0.2s;}
 .nav-admin-btn:hover{color:var(--text);background:var(--surface2);}
 
-.home-header{max-width:600px;margin:0 auto;padding:28px 20px 20px;}
+/* HOME */
+.home-header{max-width:600px;margin:0 auto;padding:28px 20px 16px;}
 .home-title{font-size:11px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
 .home-sub{font-size:22px;font-weight:500;color:var(--text);}
 .home-sub span{color:var(--purple-light);}
+
+/* ONGLETS */
+.tabs-wrap{max-width:600px;margin:0 auto;padding:0 20px 16px;}
+.tabs{display:flex;gap:8px;background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:4px;}
+.tab-btn{flex:1;background:transparent;border:none;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:13px;font-weight:500;padding:9px 12px;border-radius:9px;cursor:pointer;transition:all 0.2s;display:flex;align-items:center;justify-content:center;gap:6px;}
+.tab-btn.active{background:var(--surface2);color:var(--text);}
+.tab-btn:hover:not(.active){color:var(--text);}
+.tab-count{background:var(--purple-dim);color:var(--purple-light);font-size:10px;font-weight:600;padding:2px 7px;border-radius:10px;min-width:18px;text-align:center;}
+.tab-btn.active .tab-count{background:var(--purple);color:#fff;}
+
+/* NOTIF BANNER */
+.notif-banner{max-width:600px;margin:0 auto 4px;padding:0 20px;}
+.notif-btn{width:100%;background:var(--surface);border:0.5px solid var(--border);border-radius:14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:13px 16px;cursor:pointer;transition:border-color 0.2s,background 0.2s;display:flex;align-items:center;gap:10px;}
+.notif-btn:hover{border-color:rgba(123,110,246,0.35);background:var(--surface2);}
+.notif-btn.active{border-color:rgba(76,175,130,0.4);color:#4CAF82;}
+.notif-icon{font-size:18px;flex-shrink:0;}
+.notif-text{flex:1;text-align:left;}
+.notif-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+
+/* EVENTS LIST */
 .events-list{max-width:600px;margin:0 auto;padding:0 20px 40px;display:flex;flex-direction:column;gap:20px;}
 
+/* CARDS */
 .event-card{background:var(--surface);border:0.5px solid var(--border);border-radius:16px;overflow:hidden;cursor:pointer;transition:border-color 0.2s,transform 0.15s;}
 .event-card:hover{border-color:rgba(123,110,246,0.35);transform:translateY(-2px);}
 .event-card:active{transform:scale(0.99);}
+.event-card.past-card{opacity:0.6;}
+.event-card.past-card:hover{opacity:0.85;border-color:rgba(255,255,255,0.12);}
 .card-cover{width:100%;height:200px;object-fit:cover;display:block;}
 .card-cover-placeholder{width:100%;height:200px;background:linear-gradient(135deg,#1a1030,#0d0820);display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden;}
 .card-cover-placeholder::before{content:'';position:absolute;top:-40px;right:-40px;width:200px;height:200px;background:radial-gradient(circle,rgba(123,110,246,0.2) 0%,transparent 70%);border-radius:50%;}
@@ -59,20 +84,14 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
 .card-time{font-size:13px;color:var(--purple-light);font-weight:500;}
 .card-tags{display:flex;flex-wrap:wrap;gap:6px;}
 .card-tag{background:var(--surface2);border:0.5px solid var(--border);color:var(--text);font-size:11px;padding:4px 10px;border-radius:20px;}
+.past-card .card-time{color:var(--muted);}
 
+/* EMPTY STATE */
 .empty-state{text-align:center;padding:60px 20px;}
 .empty-state p{color:var(--muted);font-size:15px;line-height:1.7;}
 .empty-icon{font-size:40px;margin-bottom:16px;}
 
-.notif-banner{max-width:600px;margin:0 auto 4px;padding:0 20px;}
-.notif-btn{width:100%;background:var(--surface);border:0.5px solid var(--border);border-radius:14px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:13px 16px;cursor:pointer;transition:border-color 0.2s,background 0.2s;display:flex;align-items:center;gap:10px;}
-.notif-btn:hover{border-color:rgba(123,110,246,0.35);background:var(--surface2);}
-.notif-btn.active{border-color:rgba(76,175,130,0.4);color:#4CAF82;}
-.notif-btn.active:hover{background:var(--surface);}
-.notif-icon{font-size:18px;flex-shrink:0;}
-.notif-text{flex:1;text-align:left;}
-.notif-sub{font-size:11px;color:var(--muted);margin-top:1px;}
-
+/* DETAIL PAGE */
 .detail-cover-wrap{width:100%;height:260px;position:relative;overflow:hidden;}
 .detail-cover-img{width:100%;height:100%;object-fit:cover;}
 .detail-cover-placeholder{width:100%;height:100%;background:linear-gradient(160deg,#1a1030 0%,#0d0820 60%,#0a0a0f 100%);position:relative;}
@@ -118,6 +137,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
 .av1{background:#534AB7;color:#EEEDFE;}.av2{background:#1D9E75;color:#E1F5EE;}
 .av3{background:#D85A30;color:#FAECE7;}.av4{background:var(--surface2);color:var(--muted);font-size:9px;}
 
+/* CTA */
 .cta-sticky{position:fixed;bottom:0;left:0;right:0;background:rgba(10,10,15,0.96);backdrop-filter:blur(12px);border-top:0.5px solid var(--border);padding:14px 20px 20px;z-index:50;}
 .cta-sticky-inner{max-width:600px;margin:0 auto;}
 .btn{width:100%;background:var(--purple);border:none;border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:16px;font-weight:500;padding:17px;cursor:pointer;transition:background 0.2s,transform 0.1s;position:relative;overflow:hidden;}
@@ -130,11 +150,15 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
 .btn-share:hover{background:var(--surface2);border-color:rgba(255,255,255,0.25);}
 .btn-share:active{transform:scale(0.98);}
 
+/* PAST EVENT — bouton désactivé */
+.btn-past{width:100%;background:var(--surface);border:0.5px solid var(--border);border-radius:14px;color:var(--muted);font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;padding:17px;cursor:default;display:flex;align-items:center;justify-content:center;gap:8px;}
+
 .ripple{position:absolute;border-radius:50%;background:rgba(255,255,255,0.2);transform:scale(0);animation:rpl 0.5s linear;pointer-events:none;}
 @keyframes rpl{to{transform:scale(4);opacity:0;}}
 .pulse{animation:pls 0.4s ease;}
 @keyframes pls{0%{transform:scale(1);}50%{transform:scale(1.06);}100%{transform:scale(1);}}
 
+/* ADMIN */
 .admin-wrap{max-width:600px;margin:0 auto;padding:24px 20px 60px;}
 .admin-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--text);margin-bottom:4px;}
 .admin-sub{font-size:14px;color:var(--muted);margin-bottom:28px;}
@@ -171,26 +195,31 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
 .btn-icon:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
 .btn-icon-danger:hover{color:var(--red);border-color:rgba(226,75,74,0.3);background:rgba(226,75,74,0.08);}
 
+/* LOGIN */
 .login-wrap{max-width:360px;margin:80px auto;padding:0 20px;}
 .login-card{background:var(--surface);border:0.5px solid var(--border);border-radius:20px;padding:32px 28px;}
 .login-title{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--text);margin-bottom:4px;}
 .login-sub{font-size:14px;color:var(--muted);margin-bottom:24px;}
 .login-error{background:rgba(226,75,74,0.1);border:0.5px solid rgba(226,75,74,0.3);border-radius:8px;color:var(--red);font-size:13px;padding:10px 12px;margin-bottom:16px;display:none;}
 
+/* TOAST */
 .toast{position:fixed;bottom:100px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:12px 20px;font-size:14px;color:var(--text);opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;}
 .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
 .toast.success{border-color:rgba(76,175,130,0.4);color:#4CAF82;}
 .toast.error{border-color:rgba(226,75,74,0.4);color:var(--red);}
 
+/* LOADING */
 .loading{display:flex;align-items:center;justify-content:center;padding:50px 20px;}
 .spinner{width:26px;height:26px;border:2px solid var(--surface2);border-top-color:var(--purple);border-radius:50%;animation:spin 0.7s linear infinite;}
 @keyframes spin{to{transform:rotate(360deg);}}
 
+/* ANIMATIONS */
 @keyframes fiu{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
 .anim{animation:fiu 0.35s ease both;}
 .d1{animation-delay:0.05s;}.d2{animation-delay:0.1s;}.d3{animation-delay:0.15s;}
 .d4{animation-delay:0.2s;}.d5{animation-delay:0.25s;}
 
+/* MODAL */
 .modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:200;display:none;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
 .modal-bg.open{display:flex;}
 .modal{background:var(--surface);border:0.5px solid var(--border);border-radius:20px;padding:28px;width:100%;max-width:480px;margin:auto;}
@@ -215,7 +244,21 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
     <div class="home-title">Bar étudiant · ECAM Bruz</div>
     <div class="home-sub">Prochaines <span>soirées</span></div>
   </div>
-  <div class="notif-banner anim" id="notif-banner" style="display:none;">
+
+  <!-- ONGLETS -->
+  <div class="tabs-wrap anim d1">
+    <div class="tabs">
+      <button class="tab-btn active" id="tab-upcoming" onclick="switchTab('upcoming')">
+        À venir <span class="tab-count" id="count-upcoming">0</span>
+      </button>
+      <button class="tab-btn" id="tab-past" onclick="switchTab('past')">
+        Terminées <span class="tab-count" id="count-past">0</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- BANDEAU NOTIFICATIONS -->
+  <div class="notif-banner anim d1" id="notif-banner" style="display:none;">
     <button class="notif-btn" id="notif-btn" onclick="toggleNotifications()">
       <span class="notif-icon">🔔</span>
       <div class="notif-text">
@@ -224,6 +267,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
       </div>
     </button>
   </div>
+
   <div class="events-list" id="events-list">
     <div class="loading"><div class="spinner"></div></div>
   </div>
@@ -381,7 +425,7 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
 </div>
 
 <script>
-// ── FIREBASE INIT ──
+// ── FIREBASE ──
 const firebaseConfig = {
   apiKey: "AIzaSyAIQQp4DCQ0Twc6EG86kDMguCUtSpD5TSI",
   authDomain: "bar-exam-dbc29.firebaseapp.com",
@@ -391,7 +435,6 @@ const firebaseConfig = {
   messagingSenderId: "560058741022",
   appId: "1:560058741022:web:f87bcb50044da72a39190f"
 };
-
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
@@ -401,6 +444,67 @@ let isLoggedIn = false;
 let allEvents = {};
 let editingId = null;
 let counterListener = null;
+let currentTab = 'upcoming';
+
+// ── ONESIGNAL ──
+// ⚠️ Remplace ces deux valeurs par les tiennes (onesignal.com → Settings → Keys & IDs)
+var ONESIGNAL_APP_ID   = 'COLLE_TON_APP_ID_ICI';
+var ONESIGNAL_REST_KEY = 'COLLE_TA_REST_API_KEY_ICI';
+
+window.OneSignalDeferred = window.OneSignalDeferred || [];
+OneSignalDeferred.push(function(OneSignal) {
+  OneSignal.init({ appId: ONESIGNAL_APP_ID }).then(function() {
+    var banner = document.getElementById('notif-banner');
+    if (banner) banner.style.display = 'block';
+    updateNotifButton();
+  });
+});
+
+function updateNotifButton() {
+  var btn   = document.getElementById('notif-btn');
+  var label = document.getElementById('notif-label');
+  var sub   = document.getElementById('notif-sublabel');
+  if (!btn) return;
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    btn.classList.add('active');
+    label.textContent = 'Notifications activées ✓';
+    sub.textContent   = "Tu seras prévenu dès qu'une nouvelle soirée est ajoutée";
+  } else {
+    btn.classList.remove('active');
+    label.textContent = 'Recevoir les alertes soirées';
+    sub.textContent   = "Sois notifié dès qu'une nouvelle soirée est ajoutée";
+  }
+}
+
+function toggleNotifications() {
+  if (typeof OneSignal === 'undefined') return;
+  if (typeof Notification !== 'undefined' && Notification.permission === 'granted') {
+    showToast('Notifications déjà activées !', 'success');
+    return;
+  }
+  OneSignal.Notifications.requestPermission().then(function(accepted) {
+    showToast(accepted ? 'Notifications activées !' : 'Permission refusée', accepted ? 'success' : 'error');
+    updateNotifButton();
+  }).catch(function() { showToast('Erreur notifications', 'error'); });
+}
+
+function sendPushNotification(eventName, eventDate, startTime) {
+  if (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID === 'COLLE_TON_APP_ID_ICI') return;
+  var d = new Date(eventDate + 'T12:00:00');
+  var dateStr = d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
+  var timeStr = startTime ? ' à ' + startTime : '';
+  fetch('https://onesignal.com/api/v1/notifications', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Authorization': 'Basic ' + ONESIGNAL_REST_KEY },
+    body: JSON.stringify({
+      app_id: ONESIGNAL_APP_ID,
+      included_segments: ['All'],
+      headings: { fr: '🎉 Nouvelle soirée — Bar ECAM Bruz' },
+      contents: { fr: eventName + ' — ' + dateStr + timeStr },
+      url: window.location.origin + window.location.pathname
+    })
+  }).catch(function() {});
+}
 
 // ── PAGES ──
 function showPage(id) {
@@ -454,7 +558,7 @@ function showToast(msg, type) {
 function getStatus(ev) {
   const now = new Date();
   const start = new Date(ev.date + 'T' + (ev.startTime || '00:00'));
-  const end = new Date(ev.date + 'T' + (ev.endTime || '23:59'));
+  const end   = new Date(ev.date + 'T' + (ev.endTime   || '23:59'));
   if (now >= start && now <= end) return 'live';
   if (now < start) return 'upcoming';
   return 'past';
@@ -466,17 +570,23 @@ function statusLabel(s) {
 
 function fmtDate(d) {
   if (!d) return '';
-  const dt = new Date(d + 'T12:00:00');
-  return dt.toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long', year:'numeric' });
 }
 
 function fmtDateShort(d) {
   if (!d) return '';
-  const dt = new Date(d + 'T12:00:00');
-  return dt.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short', year: 'numeric' });
+  return new Date(d + 'T12:00:00').toLocaleDateString('fr-FR', { day:'numeric', month:'short', year:'numeric' });
 }
 
 function initial(name) { return name ? name.charAt(0).toUpperCase() : '?'; }
+
+// ── ONGLETS ──
+function switchTab(tab) {
+  currentTab = tab;
+  document.getElementById('tab-upcoming').classList.toggle('active', tab === 'upcoming');
+  document.getElementById('tab-past').classList.toggle('active', tab === 'past');
+  renderEvents();
+}
 
 // ── HOME ──
 function loadHomeEvents() {
@@ -486,48 +596,65 @@ function loadHomeEvents() {
   db.ref('events').once('value')
     .then(snap => {
       allEvents = snap.val() || {};
-      const sorted = Object.entries(allEvents).sort((a, b) => {
-        return new Date(a[1].date + 'T' + (a[1].startTime || '00:00'))
-             - new Date(b[1].date + 'T' + (b[1].startTime || '00:00'));
-      });
-
-      if (sorted.length === 0) {
-        list.innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><p>Aucune soirée pour le moment.<br>Revenez bientôt !</p></div>';
-        return;
-      }
-
-      list.innerHTML = '';
-      sorted.forEach(([id, ev], i) => {
-        const status = getStatus(ev);
-        const tags = ev.ambiances ? ev.ambiances.split(',').map(a => a.trim()).filter(Boolean) : [];
-        const card = document.createElement('div');
-        card.className = 'event-card anim';
-        card.style.animationDelay = (i * 0.07) + 's';
-        card.innerHTML =
-          (ev.cover
-            ? `<img class="card-cover" src="${ev.cover}" alt="${ev.name}" onerror="this.outerHTML='<div class=\\'card-cover-placeholder\\'><div class=\\'placeholder-title\\'>${ev.name}</div></div>'">`
-            : `<div class="card-cover-placeholder"><div class="placeholder-title">${ev.name}</div></div>`) +
-          `<div class="card-body">
-            <div class="card-top">
-              <div class="card-name">${ev.name}</div>
-              <span class="card-status status-${status}">${statusLabel(status)}</span>
-            </div>
-            <div class="card-meta">
-              <span class="card-assoc">${ev.association || 'Bar ECAM'}</span>
-              <div class="card-dot"></div>
-              <span class="card-date">${fmtDateShort(ev.date)}</span>
-              ${ev.startTime ? `<div class="card-dot"></div><span class="card-time">${ev.startTime}${ev.endTime ? ' → ' + ev.endTime : ''}</span>` : ''}
-            </div>
-            ${tags.length ? `<div class="card-tags">${tags.slice(0, 4).map(t => `<span class="card-tag">${t}</span>`).join('')}</div>` : ''}
-          </div>`;
-        card.onclick = () => openEvent(id);
-        list.appendChild(card);
-      });
+      renderEvents();
     })
-    .catch(err => {
-      list.innerHTML = '<div class="empty-state"><p>Erreur de connexion.<br>Vérifie ta connexion internet.</p></div>';
-      console.error('Firebase error:', err);
+    .catch(() => {
+      document.getElementById('events-list').innerHTML =
+        '<div class="empty-state"><p>Erreur de connexion.<br>Vérifie ta connexion internet.</p></div>';
     });
+}
+
+function renderEvents() {
+  const list = document.getElementById('events-list');
+  const sorted = Object.entries(allEvents).sort((a, b) => {
+    return new Date(a[1].date + 'T' + (a[1].startTime || '00:00'))
+         - new Date(b[1].date + 'T' + (b[1].startTime || '00:00'));
+  });
+
+  const upcoming = sorted.filter(([, ev]) => getStatus(ev) !== 'past');
+  const past     = sorted.filter(([, ev]) => getStatus(ev) === 'past').reverse();
+
+  // Mise à jour des compteurs dans les onglets
+  document.getElementById('count-upcoming').textContent = upcoming.length;
+  document.getElementById('count-past').textContent     = past.length;
+
+  const toShow = currentTab === 'upcoming' ? upcoming : past;
+
+  if (toShow.length === 0) {
+    list.innerHTML = currentTab === 'upcoming'
+      ? '<div class="empty-state"><div class="empty-icon">🎵</div><p>Aucune soirée prévue pour le moment.<br>Revenez bientôt !</p></div>'
+      : '<div class="empty-state"><div class="empty-icon">📅</div><p>Aucune soirée passée pour le moment.</p></div>';
+    return;
+  }
+
+  list.innerHTML = '';
+  toShow.forEach(([id, ev], i) => {
+    const status = getStatus(ev);
+    const isPast = status === 'past';
+    const tags   = ev.ambiances ? ev.ambiances.split(',').map(a => a.trim()).filter(Boolean) : [];
+    const card   = document.createElement('div');
+    card.className = 'event-card anim' + (isPast ? ' past-card' : '');
+    card.style.animationDelay = (i * 0.07) + 's';
+    card.innerHTML =
+      (ev.cover
+        ? `<img class="card-cover" src="${ev.cover}" alt="${ev.name}" onerror="this.outerHTML='<div class=\\'card-cover-placeholder\\'><div class=\\'placeholder-title\\'>${ev.name}</div></div>'">`
+        : `<div class="card-cover-placeholder"><div class="placeholder-title">${ev.name}</div></div>`) +
+      `<div class="card-body">
+        <div class="card-top">
+          <div class="card-name">${ev.name}</div>
+          <span class="card-status status-${status}">${statusLabel(status)}</span>
+        </div>
+        <div class="card-meta">
+          <span class="card-assoc">${ev.association || 'Bar ECAM'}</span>
+          <div class="card-dot"></div>
+          <span class="card-date">${fmtDateShort(ev.date)}</span>
+          ${ev.startTime ? `<div class="card-dot"></div><span class="card-time">${ev.startTime}${ev.endTime ? ' → ' + ev.endTime : ''}</span>` : ''}
+        </div>
+        ${tags.length ? `<div class="card-tags">${tags.slice(0, 4).map(t => `<span class="card-tag">${t}</span>`).join('')}</div>` : ''}
+      </div>`;
+    card.onclick = () => openEvent(id);
+    list.appendChild(card);
+  });
 }
 
 // ── DETAIL ──
@@ -540,7 +667,8 @@ function openEvent(id) {
 
 function renderDetail(id, ev) {
   const ambiances = ev.ambiances ? ev.ambiances.split(',').map(a => a.trim()).filter(Boolean) : [];
-  const lineup = ev.lineup ? ev.lineup.split('\n').map(l => l.trim()).filter(Boolean) : [];
+  const lineup    = ev.lineup    ? ev.lineup.split('\n').map(l => l.trim()).filter(Boolean)    : [];
+  const isPast    = getStatus(ev) === 'past';
 
   document.getElementById('detail-cover-wrap').innerHTML =
     `<div class="detail-cover-wrap">
@@ -549,7 +677,7 @@ function renderDetail(id, ev) {
         : `<div class="detail-cover-placeholder"><div class="detail-cover-dots"></div></div>`}
       <div class="detail-cover-tags">
         <span class="detail-tag">${ev.type || 'Soirée'}</span>
-        <span class="detail-tag detail-tag-o">Bar ECAM Bruz</span>
+        <span class="detail-tag detail-tag-o">${isPast ? 'Soirée terminée' : 'Bar ECAM Bruz'}</span>
       </div>
     </div>`;
 
@@ -562,7 +690,7 @@ function renderDetail(id, ev) {
     <div class="detail-infos anim d2">
       <div>
         <div class="detail-info-label">Lieu</div>
-        <div class="detail-info-val">${ev.venue || 'Bar de l\'ECAM'}</div>
+        <div class="detail-info-val">${ev.venue || "Bar de l'ECAM"}</div>
         ${ev.address ? `<div class="detail-info-sub">${ev.address}</div>` : ''}
       </div>
       <div>
@@ -576,9 +704,9 @@ function renderDetail(id, ev) {
     <div class="counter-section anim d5">
       <div class="counter-block">
         <div>
-          <div class="counter-label">Participants prévus</div>
+          <div class="counter-label">${isPast ? 'Participants enregistrés' : 'Participants prévus'}</div>
           <div class="counter-num" id="counter-num">...</div>
-          <div class="counter-sub">personnes comptent venir</div>
+          <div class="counter-sub">${isPast ? 'personnes étaient venues' : 'personnes comptent venir'}</div>
         </div>
         <div class="avatars">
           <div class="av av1">A</div><div class="av av2">M</div>
@@ -587,43 +715,47 @@ function renderDetail(id, ev) {
       </div>
     </div>`;
 
+  // CTA : bouton désactivé si soirée passée
   document.getElementById('detail-cta').innerHTML =
     `<div class="cta-sticky">
       <div class="cta-sticky-inner">
-        <button class="btn" id="cta-btn" onclick="handleComing(event,'${id}')">
-          <span class="btn-inner" id="cta-inner">Je compte venir</span>
-        </button>
+        ${isPast
+          ? `<div class="btn-past">📅 Cette soirée est terminée</div>`
+          : `<button class="btn" id="cta-btn" onclick="handleComing(event,'${id}')">
+               <span class="btn-inner" id="cta-inner">Je compte venir</span>
+             </button>`
+        }
         <button class="btn-share" onclick="shareEvent('${id}')">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
           Partager cette soirée
         </button>
-        <div class="btn-hint" id="cta-hint">Un simple clic · Pas d'inscription requise</div>
+        ${!isPast ? `<div class="btn-hint" id="cta-hint">Un simple clic · Pas d'inscription requise</div>` : ''}
       </div>
     </div>`;
 
-  if (counterListener) counterListener();
+  if (counterListener) { counterListener(); counterListener = null; }
   counterListener = db.ref('events/' + id + '/count').on('value', snap => {
     const val = snap.val() || 0;
-    const el = document.getElementById('counter-num');
-    const av = document.getElementById('av-extra');
+    const el  = document.getElementById('counter-num');
+    const av  = document.getElementById('av-extra');
     if (el) el.textContent = val;
     if (av) av.textContent = val > 3 ? '+' + (val - 3) : '+';
   });
 }
 
 function handleComing(e, id) {
-  const btn = document.getElementById('cta-btn');
+  const btn   = document.getElementById('cta-btn');
   const inner = document.getElementById('cta-inner');
-  const hint = document.getElementById('cta-hint');
+  const hint  = document.getElementById('cta-hint');
   if (!btn || btn.classList.contains('confirmed')) return;
 
   btn.disabled = true;
   inner.textContent = '...';
 
-  const r = document.createElement('span');
+  const r    = document.createElement('span');
   r.className = 'ripple';
   const rect = btn.getBoundingClientRect();
-  const sz = Math.max(rect.width, rect.height);
+  const sz   = Math.max(rect.width, rect.height);
   r.style.cssText = `width:${sz}px;height:${sz}px;left:${e.clientX-rect.left-sz/2}px;top:${e.clientY-rect.top-sz/2}px;`;
   btn.appendChild(r);
   setTimeout(() => r.remove(), 600);
@@ -637,10 +769,10 @@ function handleComing(e, id) {
       if (av) av.textContent = newVal > 3 ? '+' + (newVal - 3) : '+';
       btn.disabled = false;
       btn.classList.add('confirmed', 'pulse');
-      const ev = allEvents[id];
-      const day = new Date(ev.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday: 'long', day: 'numeric', month: 'long' });
+      const ev  = allEvents[id];
+      const day = new Date(ev.date + 'T12:00:00').toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
       inner.innerHTML = '<span class="ck">✓</span> Tu es comptabilisé !';
-      hint.textContent = `Merci, à ${day} !`;
+      if (hint) hint.textContent = `Merci, à ${day} !`;
     })
     .catch(err => {
       btn.disabled = false;
@@ -670,7 +802,7 @@ function loadAdminEvents() {
           <div class="admin-event-info">
             <div class="admin-event-name">${ev.name}</div>
             <div class="admin-event-date">${fmtDateShort(ev.date)}${ev.startTime ? ' · ' + ev.startTime : ''}</div>
-            <div class="admin-event-count">${ev.count || 0} participant(s) prévu(s)</div>
+            <div class="admin-event-count">${ev.count || 0} participant(s) · ${statusLabel(getStatus(ev))}</div>
           </div>
           <div class="admin-event-actions">
             <button class="btn-icon" onclick="openEdit('${id}')">Modifier</button>
@@ -695,19 +827,18 @@ function addEvent() {
   btn.disabled = true;
 
   const data = {
-    name,
-    date,
-    startTime: document.getElementById('f-start').value || '',
-    endTime: document.getElementById('f-end').value || '',
-    type: document.getElementById('f-type').value,
+    name, date,
+    startTime:   document.getElementById('f-start').value    || '',
+    endTime:     document.getElementById('f-end').value       || '',
+    type:        document.getElementById('f-type').value,
     association: document.getElementById('f-assoc').value.trim(),
-    venue: document.getElementById('f-venue').value.trim(),
-    address: document.getElementById('f-address').value.trim(),
-    cover: document.getElementById('f-cover').value.trim(),
+    venue:       document.getElementById('f-venue').value.trim(),
+    address:     document.getElementById('f-address').value.trim(),
+    cover:       document.getElementById('f-cover').value.trim(),
     description: document.getElementById('f-desc').value.trim(),
-    ambiances: document.getElementById('f-ambiances').value.trim(),
-    lineup: document.getElementById('f-lineup').value.trim(),
-    free: document.getElementById('f-free').value,
+    ambiances:   document.getElementById('f-ambiances').value.trim(),
+    lineup:      document.getElementById('f-lineup').value.trim(),
+    free:        document.getElementById('f-free').value,
     count: 0,
     createdAt: Date.now()
   };
@@ -716,8 +847,8 @@ function addEvent() {
     .then(() => {
       showToast('Soirée ajoutée !', 'success');
       sendPushNotification(data.name, data.date, data.startTime);
-      ['f-name','f-date','f-start','f-end','f-cover','f-desc','f-ambiances','f-lineup'].forEach(id => {
-        document.getElementById(id).value = '';
+      ['f-name','f-date','f-start','f-end','f-cover','f-desc','f-ambiances','f-lineup'].forEach(fid => {
+        document.getElementById(fid).value = '';
       });
       btn.textContent = 'Ajouter la soirée';
       btn.disabled = false;
@@ -725,7 +856,6 @@ function addEvent() {
     })
     .catch(err => {
       showToast('Erreur : ' + err.message, 'error');
-      console.error('Firebase push error:', err);
       btn.textContent = 'Ajouter la soirée';
       btn.disabled = false;
     });
@@ -742,19 +872,19 @@ function openEdit(id) {
   const ev = allEvents[id];
   if (!ev) return;
   editingId = id;
-  document.getElementById('e-name').value = ev.name || '';
-  document.getElementById('e-date').value = ev.date || '';
-  document.getElementById('e-start').value = ev.startTime || '';
-  document.getElementById('e-end').value = ev.endTime || '';
-  document.getElementById('e-type').value = ev.type || 'DJ';
-  document.getElementById('e-assoc').value = ev.association || '';
-  document.getElementById('e-venue').value = ev.venue || '';
-  document.getElementById('e-address').value = ev.address || '';
-  document.getElementById('e-cover').value = ev.cover || '';
-  document.getElementById('e-desc').value = ev.description || '';
-  document.getElementById('e-ambiances').value = ev.ambiances || '';
-  document.getElementById('e-lineup').value = ev.lineup || '';
-  document.getElementById('e-free').value = String(ev.free);
+  document.getElementById('e-name').value     = ev.name        || '';
+  document.getElementById('e-date').value     = ev.date        || '';
+  document.getElementById('e-start').value    = ev.startTime   || '';
+  document.getElementById('e-end').value      = ev.endTime     || '';
+  document.getElementById('e-type').value     = ev.type        || 'DJ';
+  document.getElementById('e-assoc').value    = ev.association  || '';
+  document.getElementById('e-venue').value    = ev.venue       || '';
+  document.getElementById('e-address').value  = ev.address     || '';
+  document.getElementById('e-cover').value    = ev.cover       || '';
+  document.getElementById('e-desc').value     = ev.description || '';
+  document.getElementById('e-ambiances').value= ev.ambiances   || '';
+  document.getElementById('e-lineup').value   = ev.lineup      || '';
+  document.getElementById('e-free').value     = String(ev.free);
   document.getElementById('modal-edit').classList.add('open');
 }
 
@@ -771,17 +901,17 @@ function saveEdit() {
 
   db.ref('events/' + editingId).update({
     name, date,
-    startTime: document.getElementById('e-start').value || '',
-    endTime: document.getElementById('e-end').value || '',
-    type: document.getElementById('e-type').value,
+    startTime:   document.getElementById('e-start').value    || '',
+    endTime:     document.getElementById('e-end').value       || '',
+    type:        document.getElementById('e-type').value,
     association: document.getElementById('e-assoc').value.trim(),
-    venue: document.getElementById('e-venue').value.trim(),
-    address: document.getElementById('e-address').value.trim(),
-    cover: document.getElementById('e-cover').value.trim(),
+    venue:       document.getElementById('e-venue').value.trim(),
+    address:     document.getElementById('e-address').value.trim(),
+    cover:       document.getElementById('e-cover').value.trim(),
     description: document.getElementById('e-desc').value.trim(),
-    ambiances: document.getElementById('e-ambiances').value.trim(),
-    lineup: document.getElementById('e-lineup').value.trim(),
-    free: document.getElementById('e-free').value,
+    ambiances:   document.getElementById('e-ambiances').value.trim(),
+    lineup:      document.getElementById('e-lineup').value.trim(),
+    free:        document.getElementById('e-free').value,
   })
   .then(() => { closeModal(); showToast('Soirée modifiée !', 'success'); loadAdminEvents(); })
   .catch(err => showToast('Erreur : ' + err.message, 'error'));
@@ -791,25 +921,20 @@ document.getElementById('modal-edit').addEventListener('click', function(e) {
   if (e.target === this) closeModal();
 });
 
-// Init
-loadHomeEvents();
-
 // ── PARTAGE ──
 function shareEvent(id) {
   const ev = allEvents[id];
   if (!ev) return;
-  const url = window.location.origin + window.location.pathname + '?event=' + id;
+  const url       = window.location.origin + window.location.pathname + '?event=' + id;
   const shareText = ev.name + ' — ' + fmtDateShort(ev.date) + (ev.startTime ? ' · ' + ev.startTime : '') + '\nBar ECAM Bruz';
   if (navigator.share) {
     navigator.share({ title: ev.name, text: shareText, url: url }).catch(function() {});
+  } else if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url)
+      .then(function() { showToast('Lien copié !', 'success'); })
+      .catch(function() { fallbackCopy(url); });
   } else {
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-      navigator.clipboard.writeText(url)
-        .then(function() { showToast('Lien copié !', 'success'); })
-        .catch(function() { fallbackCopy(url); });
-    } else {
-      fallbackCopy(url);
-    }
+    fallbackCopy(url);
   }
 }
 
@@ -818,16 +943,15 @@ function fallbackCopy(text) {
   ta.value = text;
   ta.style.cssText = 'position:fixed;top:-9999px;left:-9999px;';
   document.body.appendChild(ta);
-  ta.focus();
-  ta.select();
+  ta.focus(); ta.select();
   try { document.execCommand('copy'); showToast('Lien copié !', 'success'); }
   catch(e) { showToast('Impossible de copier', 'error'); }
   document.body.removeChild(ta);
 }
 
-// ── LIEN DIRECT — ouvre la soirée si ?event=ID dans l'URL ──
+// ── LIEN DIRECT ──
 (function() {
-  var params = new URLSearchParams(window.location.search);
+  var params  = new URLSearchParams(window.location.search);
   var eventId = params.get('event');
   if (!eventId) return;
   db.ref('events/' + eventId).once('value')
@@ -840,75 +964,8 @@ function fallbackCopy(text) {
     .catch(function() {});
 })();
 
-// ── ONESIGNAL — NOTIFICATIONS PUSH ──
-// ⚠️ REMPLACE ces deux valeurs par les tiennes (récupérées sur onesignal.com)
-var ONESIGNAL_APP_ID  = '330c2c53-e929-4e21-b90d-29d57f0a0098';
-var ONESIGNAL_REST_KEY = 'os_v2_app_gmgcyu7jffhcdoinfhkx6cqatdepveucv56urp4i7zj3mwt2bunds5thds3o2dq5pnnkiqqgijytwdilmh57cjzobxjk4kgskea7swy'; // ⚠️ À REMPLACER par ta REST API Key (Settings → Keys & IDs sur onesignal.com)
-
-window.OneSignalDeferred = window.OneSignalDeferred || [];
-OneSignalDeferred.push(function(OneSignal) {
-  OneSignal.init({ appId: ONESIGNAL_APP_ID }).then(function() {
-    var banner = document.getElementById('notif-banner');
-    if (banner) banner.style.display = 'block';
-    updateNotifButton();
-  });
-});
-
-function updateNotifButton() {
-  var btn   = document.getElementById('notif-btn');
-  var label = document.getElementById('notif-label');
-  var sub   = document.getElementById('notif-sublabel');
-  if (!btn || !label || !sub) return;
-  if (Notification && Notification.permission === 'granted') {
-    btn.classList.add('active');
-    label.textContent = 'Notifications activées ✓';
-    sub.textContent   = 'Tu seras prévenu dès qu\'une nouvelle soirée est ajoutée';
-  } else {
-    btn.classList.remove('active');
-    label.textContent = 'Recevoir les alertes soirées';
-    sub.textContent   = 'Sois notifié dès qu\'une nouvelle soirée est ajoutée';
-  }
-}
-
-function toggleNotifications() {
-  if (typeof OneSignal === 'undefined') return;
-  if (Notification && Notification.permission === 'granted') {
-    showToast('Notifications déjà activées !', 'success');
-    return;
-  }
-  OneSignal.Notifications.requestPermission().then(function(accepted) {
-    if (accepted) {
-      showToast('Notifications activées !', 'success');
-    } else {
-      showToast('Permission refusée', 'error');
-    }
-    updateNotifButton();
-  }).catch(function() {
-    showToast('Erreur notifications', 'error');
-  });
-}
-
-function sendPushNotification(eventName, eventDate, startTime) {
-  if (!ONESIGNAL_APP_ID || ONESIGNAL_APP_ID === 'COLLE_TON_APP_ID_ICI') return;
-  var d = new Date(eventDate + 'T12:00:00');
-  var dateStr = d.toLocaleDateString('fr-FR', { weekday:'long', day:'numeric', month:'long' });
-  var timeStr = startTime ? ' à ' + startTime : '';
-  var message = eventName + ' — ' + dateStr + timeStr;
-  fetch('https://onesignal.com/api/v1/notifications', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': 'Basic ' + ONESIGNAL_REST_KEY
-    },
-    body: JSON.stringify({
-      app_id: ONESIGNAL_APP_ID,
-      included_segments: ['All'],
-      headings: { fr: '🎉 Nouvelle soirée — Bar ECAM Bruz' },
-      contents: { fr: message },
-      url: window.location.origin + window.location.pathname
-    })
-  }).catch(function() {});
-}
+// ── INIT ──
+loadHomeEvents();
 </script>
 </body>
 </html>
