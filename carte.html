@@ -1,0 +1,1189 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Carte des Boissons · Bar ECAM Bruz</title>
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=DM+Sans:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-database-compat.js"></script>
+<style>
+:root{
+  --bg:#0a0a0f;--surface:#13131a;--surface2:#1c1c26;
+  --border:rgba(255,255,255,0.07);--purple:#7B6EF6;
+  --purple-light:#a99ff8;--purple-dim:rgba(123,110,246,0.15);
+  --green:#4CAF82;--red:#E24B4A;--text:#f0f0f5;--muted:#6b6b80;
+  --amber:#F0A500;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',sans-serif;min-height:100vh;overflow-x:hidden;}
+.page{display:none;min-height:100vh;}.page.active{display:block;}
+
+/* ── NAV ── */
+nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-filter:blur(12px);border-bottom:0.5px solid var(--border);padding:0 20px;}
+.nav-inner{max-width:600px;margin:0 auto;display:flex;align-items:center;justify-content:space-between;height:56px;}
+.nav-logo{font-family:'Bebas Neue',sans-serif;font-size:22px;letter-spacing:0.05em;color:var(--text);cursor:pointer;}
+.nav-logo span{color:var(--purple);}
+.nav-admin-btn{font-size:12px;color:var(--muted);cursor:pointer;padding:6px 10px;border-radius:8px;transition:color 0.2s,background 0.2s;}
+.nav-admin-btn:hover{color:var(--text);background:var(--surface2);}
+
+/* ── HOME ── */
+.home-header{max-width:600px;margin:0 auto;padding:28px 20px 16px;}
+.home-title{font-size:11px;letter-spacing:0.18em;color:var(--muted);text-transform:uppercase;margin-bottom:4px;}
+.home-sub{font-size:22px;font-weight:500;color:var(--text);}
+.home-sub span{color:var(--purple-light);}
+
+/* ── FILTER TABS ── */
+.filter-tabs{max-width:600px;margin:0 auto;padding:0 20px 16px;display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;scrollbar-width:none;}
+.filter-tabs::-webkit-scrollbar{display:none;}
+.filter-tab{background:var(--surface);border:0.5px solid var(--border);border-radius:20px;color:var(--muted);font-size:13px;font-weight:500;padding:7px 14px;cursor:pointer;white-space:nowrap;transition:all 0.2s;font-family:'DM Sans',sans-serif;flex-shrink:0;}
+.filter-tab.active{background:var(--purple-dim);border-color:var(--purple);color:var(--purple-light);}
+
+/* ── CATEGORIES ── */
+.categories-wrap{max-width:600px;margin:0 auto;padding:0 20px 120px;display:flex;flex-direction:column;gap:10px;}
+.cat-section{}
+.cat-header{display:flex;align-items:center;gap:12px;padding:15px 18px;background:var(--surface);border:0.5px solid var(--border);border-radius:14px;cursor:pointer;transition:border-color 0.2s,background 0.2s;user-select:none;}
+.cat-header:hover{border-color:rgba(123,110,246,0.3);}
+.cat-header.open{border-radius:14px 14px 0 0;border-bottom-color:transparent;background:var(--surface2);}
+.cat-icon{font-size:22px;width:36px;text-align:center;flex-shrink:0;}
+.cat-info{flex:1;}
+.cat-name{font-size:15px;font-weight:500;color:var(--text);}
+.cat-count{font-size:12px;color:var(--muted);}
+.cat-chevron{color:var(--muted);font-size:14px;transition:transform 0.25s;flex-shrink:0;}
+.cat-header.open .cat-chevron{transform:rotate(180deg);}
+.cat-body{display:none;background:var(--surface2);border:0.5px solid var(--border);border-top:none;border-radius:0 0 14px 14px;padding:12px;}
+.cat-body.open{display:block;}
+.cat-note{font-size:11px;color:var(--amber);margin-top:10px;padding:6px 10px;background:rgba(240,165,0,0.08);border-radius:8px;border:0.5px solid rgba(240,165,0,0.2);}
+
+/* ── DRINKS GRID ── */
+.drinks-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
+
+/* ── DRINK CARD ── */
+.drink-card{background:var(--surface);border:0.5px solid var(--border);border-radius:12px;overflow:hidden;display:flex;flex-direction:column;transition:border-color 0.2s,transform 0.15s;}
+.drink-card:not(.unavailable):hover{border-color:rgba(123,110,246,0.3);transform:translateY(-1px);}
+.drink-card-main{cursor:pointer;flex:1;display:flex;flex-direction:column;}
+.drink-card-img{width:100%;height:96px;object-fit:cover;display:block;}
+.drink-card-placeholder{width:100%;height:96px;display:flex;align-items:center;justify-content:center;font-size:34px;}
+.drink-card-body{padding:9px 10px;flex:1;display:flex;flex-direction:column;}
+.drink-badge{font-size:9px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:2px 7px;border-radius:10px;background:var(--amber);color:#000;align-self:flex-start;margin-bottom:4px;}
+.drink-badge.new{background:var(--green);color:#fff;}
+.drink-badge.coup{background:var(--red);color:#fff;}
+.drink-badge.bon{background:var(--purple);color:#fff;}
+.drink-card-name{font-size:13px;font-weight:500;color:var(--text);line-height:1.2;margin-bottom:2px;}
+.drink-card-type{font-size:10px;color:var(--muted);margin-bottom:4px;}
+.drink-card-price{font-size:13px;font-weight:500;color:var(--purple-light);}
+.drink-card-footer{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-top:0.5px solid var(--border);}
+.drink-unavail-label{font-size:10px;color:var(--muted);font-style:italic;}
+.add-btn{width:28px;height:28px;border-radius:50%;background:var(--purple-dim);border:0.5px solid rgba(123,110,246,0.35);color:var(--purple-light);font-size:20px;line-height:1;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;flex-shrink:0;font-family:'DM Sans',sans-serif;}
+.add-btn:hover{background:var(--purple);border-color:var(--purple);color:#fff;}
+.add-btn:active{transform:scale(0.88);}
+.add-btn.added{background:var(--green);border-color:var(--green);color:#fff;}
+.add-btn:disabled{opacity:0.3;cursor:not-allowed;}
+
+/* ── FLOATING CART ── */
+.cart-fab{position:fixed;bottom:24px;right:20px;background:var(--purple);border:none;border-radius:16px;color:#fff;font-family:'DM Sans',sans-serif;font-weight:500;padding:12px 18px;cursor:pointer;display:flex;align-items:center;gap:8px;z-index:90;transition:all 0.2s;box-shadow:0 4px 24px rgba(123,110,246,0.4);}
+.cart-fab:hover{background:#6a5ef0;transform:translateY(-2px);}
+.cart-fab.hidden{display:none;}
+.cart-fab-icon{font-size:17px;}
+.cart-fab-label{font-size:13px;}
+.cart-fab-badge{background:rgba(255,255,255,0.22);border-radius:10px;font-size:12px;font-weight:600;padding:2px 8px;}
+@keyframes cartPulse{0%{transform:scale(1);}50%{transform:scale(1.1);}100%{transform:scale(1);}}
+.cart-fab.pulse-anim{animation:cartPulse 0.35s ease;}
+
+/* ── BOTTOM SHEET MODALS ── */
+.modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.75);z-index:200;display:none;align-items:flex-end;justify-content:center;}
+.modal-bg.open{display:flex;}
+.modal-sheet{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:90vh;overflow-y:auto;padding:20px 22px 32px;animation:slideUp 0.28s ease;}
+@keyframes slideUp{from{transform:translateY(100%);}to{transform:translateY(0);}}
+.modal-handle{width:36px;height:4px;border-radius:2px;background:rgba(255,255,255,0.1);margin:0 auto 18px;}
+
+/* Drink Detail */
+.detail-img{width:100%;height:200px;object-fit:cover;border-radius:14px;margin-bottom:16px;display:block;}
+.detail-placeholder{width:100%;height:140px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:64px;margin-bottom:16px;}
+.detail-badge{display:inline-block;font-size:10px;font-weight:600;letter-spacing:0.06em;text-transform:uppercase;padding:3px 10px;border-radius:10px;background:var(--amber);color:#000;margin-bottom:8px;}
+.detail-badge.new{background:var(--green);color:#fff;}
+.detail-badge.coup{background:var(--red);color:#fff;}
+.detail-badge.bon{background:var(--purple);color:#fff;}
+.detail-name{font-family:'Bebas Neue',sans-serif;font-size:38px;line-height:0.95;color:var(--text);margin-bottom:4px;}
+.detail-type{font-size:13px;color:var(--muted);margin-bottom:14px;}
+.detail-desc{font-size:14px;color:rgba(240,240,245,0.8);line-height:1.75;margin-bottom:20px;}
+.detail-note{font-size:12px;color:var(--amber);padding:8px 12px;background:rgba(240,165,0,0.08);border:0.5px solid rgba(240,165,0,0.2);border-radius:8px;margin-bottom:16px;}
+.detail-add-section{}
+.detail-add-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:10px;}
+.size-options{display:flex;gap:10px;margin-bottom:4px;}
+.size-option{flex:1;background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:12px 8px;cursor:pointer;text-align:center;transition:all 0.2s;font-family:'DM Sans',sans-serif;}
+.size-option:hover{border-color:var(--purple);background:var(--purple-dim);}
+.size-option-size{font-size:12px;color:var(--muted);margin-bottom:3px;}
+.size-option-price{font-size:15px;font-weight:500;color:var(--purple-light);}
+.simple-add-btn{width:100%;background:var(--purple);border:none;border-radius:14px;color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:500;padding:15px;cursor:pointer;transition:background 0.2s;}
+.simple-add-btn:hover{background:#6a5ef0;}
+.detail-unavail{background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:14px;text-align:center;color:var(--muted);font-size:14px;}
+
+/* Cart Modal */
+.cart-modal{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:88vh;overflow-y:auto;padding:20px 22px 32px;animation:slideUp 0.28s ease;}
+.cart-modal-header{display:flex;align-items:baseline;gap:10px;margin-bottom:4px;}
+.cart-modal-title{font-family:'Bebas Neue',sans-serif;font-size:30px;color:var(--text);}
+.cart-modal-sub{font-size:13px;color:var(--muted);}
+.cart-divider{height:0.5px;background:var(--border);margin:14px 0;}
+.cart-items{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;}
+.cart-item{background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:12px 14px;display:flex;align-items:center;gap:10px;}
+.cart-item-icon{font-size:20px;flex-shrink:0;}
+.cart-item-info{flex:1;min-width:0;}
+.cart-item-name{font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.cart-item-variant{font-size:12px;color:var(--muted);}
+.cart-item-price{font-size:13px;color:var(--purple-light);font-weight:500;}
+.cart-qty-ctrl{display:flex;align-items:center;gap:6px;}
+.qty-btn{width:26px;height:26px;border-radius:50%;background:var(--surface);border:0.5px solid var(--border);color:var(--text);font-size:16px;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all 0.2s;font-family:'DM Sans',sans-serif;}
+.qty-btn:hover{border-color:var(--purple);color:var(--purple-light);}
+.qty-num{font-size:14px;font-weight:500;color:var(--text);min-width:16px;text-align:center;}
+.cart-total-box{background:var(--surface2);border:0.5px solid rgba(123,110,246,0.2);border-radius:14px;padding:16px 18px;display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;}
+.cart-total-label{font-size:13px;color:var(--muted);}
+.cart-total-val{font-family:'Bebas Neue',sans-serif;font-size:34px;color:var(--text);}
+.cart-hint{text-align:center;font-size:12px;color:var(--muted);margin-bottom:16px;line-height:1.6;}
+.cart-clear-btn{width:100%;background:transparent;border:0.5px solid rgba(226,75,74,0.3);border-radius:12px;color:var(--red);font-family:'DM Sans',sans-serif;font-size:14px;padding:12px;cursor:pointer;transition:all 0.2s;}
+.cart-clear-btn:hover{background:rgba(226,75,74,0.08);}
+.cart-empty{text-align:center;padding:40px 20px;}
+.cart-empty-icon{font-size:52px;margin-bottom:14px;}
+.cart-empty-text{font-size:14px;color:var(--muted);line-height:1.7;}
+
+/* ── ADMIN ── */
+.admin-wrap{max-width:600px;margin:0 auto;padding:24px 20px 60px;}
+.admin-title{font-family:'Bebas Neue',sans-serif;font-size:32px;color:var(--text);margin-bottom:4px;}
+.admin-sub{font-size:14px;color:var(--muted);margin-bottom:28px;}
+.admin-section{margin-bottom:28px;}
+.admin-section-title{font-size:12px;font-weight:500;color:var(--purple-light);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:14px;padding-bottom:8px;border-bottom:0.5px solid var(--border);}
+.admin-cat-group{margin-bottom:14px;}
+.admin-cat-label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.08em;margin-bottom:6px;padding:0 2px;display:flex;align-items:center;gap:6px;}
+.admin-drink-item{background:var(--surface);border:0.5px solid var(--border);border-radius:10px;padding:11px 14px;display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:5px;}
+.admin-drink-item.unavailable-item{opacity:0.5;}
+.admin-drink-info{flex:1;min-width:0;}
+.admin-drink-name{font-size:14px;font-weight:500;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.admin-drink-meta{font-size:12px;color:var(--muted);}
+.admin-drink-actions{display:flex;gap:6px;flex-shrink:0;}
+.btn-icon{background:var(--surface2);border:0.5px solid var(--border);border-radius:8px;color:var(--muted);font-size:12px;padding:6px 10px;cursor:pointer;transition:all 0.2s;font-family:'DM Sans',sans-serif;}
+.btn-icon:hover{color:var(--text);border-color:rgba(255,255,255,0.2);}
+.btn-icon-danger:hover{color:var(--red);border-color:rgba(226,75,74,0.3);background:rgba(226,75,74,0.08);}
+.btn-icon-toggle:hover{color:var(--green);border-color:rgba(76,175,130,0.3);background:rgba(76,175,130,0.08);}
+
+/* FORM */
+.field{margin-bottom:13px;}
+.field label{display:block;font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:5px;}
+.field input,.field textarea,.field select{width:100%;background:var(--surface);border:0.5px solid rgba(255,255,255,0.12);border-radius:10px;color:var(--text);font-family:'DM Sans',sans-serif;font-size:14px;padding:11px 14px;outline:none;transition:border-color 0.2s;-webkit-appearance:none;}
+.field input:focus,.field textarea:focus,.field select:focus{border-color:var(--purple);}
+.field select{background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M6 8L0 0h12z' fill='%236b6b80'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 14px center;padding-right:36px;}
+.field select option{background:#13131a;}
+.field textarea{resize:vertical;min-height:70px;line-height:1.6;}
+.field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.field-hint{font-size:11px;color:var(--muted);margin-top:4px;line-height:1.5;}
+.price-block{display:none;}.price-block.show{display:block;}
+
+.btn-admin{background:var(--purple);border:none;border-radius:10px;color:#fff;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:500;padding:12px 20px;cursor:pointer;transition:background 0.2s;}
+.btn-admin:hover{background:#6a5ef0;}
+.btn-admin:disabled{opacity:0.5;cursor:not-allowed;}
+.btn-admin-outline{background:transparent;border:0.5px solid rgba(255,255,255,0.15);color:var(--text);}
+.btn-admin-outline:hover{background:var(--surface2);}
+.btn-admin-secondary{background:var(--surface2);border:0.5px solid var(--border);color:var(--muted);}
+.btn-admin-secondary:hover{color:var(--text);}
+.btn-full{width:100%;}
+
+/* LOGIN */
+.login-wrap{max-width:360px;margin:80px auto;padding:0 20px;}
+.login-card{background:var(--surface);border:0.5px solid var(--border);border-radius:20px;padding:32px 28px;}
+.login-title{font-family:'Bebas Neue',sans-serif;font-size:28px;color:var(--text);margin-bottom:4px;}
+.login-sub{font-size:14px;color:var(--muted);margin-bottom:24px;}
+.login-error{background:rgba(226,75,74,0.1);border:0.5px solid rgba(226,75,74,0.3);border-radius:8px;color:var(--red);font-size:13px;padding:10px 12px;margin-bottom:14px;display:none;}
+
+/* EDIT MODAL (higher z-index than drink modal) */
+.edit-modal-bg{position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.8);z-index:300;display:none;align-items:flex-end;justify-content:center;}
+.edit-modal-bg.open{display:flex;}
+.edit-modal-sheet{background:var(--surface);border-radius:20px 20px 0 0;width:100%;max-width:600px;max-height:92vh;overflow-y:auto;padding:20px 22px 32px;animation:slideUp 0.28s ease;}
+
+/* TOAST */
+.toast{position:fixed;bottom:90px;left:50%;transform:translateX(-50%) translateY(20px);background:var(--surface);border:0.5px solid var(--border);border-radius:12px;padding:11px 20px;font-size:14px;color:var(--text);opacity:0;transition:all 0.3s;pointer-events:none;z-index:999;white-space:nowrap;max-width:90vw;}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.toast.success{border-color:rgba(76,175,130,0.4);color:#4CAF82;}
+.toast.error{border-color:rgba(226,75,74,0.4);color:var(--red);}
+
+/* LOADING / EMPTY */
+.loading{display:flex;align-items:center;justify-content:center;padding:40px 20px;}
+.spinner{width:24px;height:24px;border:2px solid var(--surface2);border-top-color:var(--purple);border-radius:50%;animation:spin 0.7s linear infinite;}
+@keyframes spin{to{transform:rotate(360deg);}}
+.empty-state{text-align:center;padding:48px 20px;}
+.empty-icon{font-size:40px;margin-bottom:14px;}
+.empty-state p{color:var(--muted);font-size:14px;line-height:1.7;}
+
+/* ANIMATIONS */
+@keyframes fiu{from{opacity:0;transform:translateY(12px);}to{opacity:1;transform:translateY(0);}}
+.anim{animation:fiu 0.35s ease both;}
+.d1{animation-delay:0.05s;}.d2{animation-delay:0.1s;}.d3{animation-delay:0.15s;}
+
+/* IMPORT BUTTON */
+.seed-box{background:var(--surface2);border:0.5px solid var(--border);border-radius:12px;padding:14px 16px;margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;gap:12px;}
+.seed-box-text{font-size:13px;color:var(--muted);line-height:1.5;}
+</style>
+</head>
+<body>
+
+<div class="toast" id="toast"></div>
+
+<!-- ═══════════════ NAV ═══════════════ -->
+<nav>
+  <div class="nav-inner">
+    <div class="nav-logo" onclick="goHome()">BAR<span>.</span>ECAM</div>
+    <div class="nav-admin-btn" id="adminNavBtn" onclick="goAdmin()">Admin</div>
+  </div>
+</nav>
+
+<!-- ═══════════════ PAGE: HOME ═══════════════ -->
+<div class="page active" id="page-home">
+  <div class="home-header anim">
+    <div class="home-title">Bar étudiant · ECAM Bruz</div>
+    <div class="home-sub">Notre <span>carte</span></div>
+  </div>
+
+  <div class="filter-tabs">
+    <button class="filter-tab active" onclick="applyFilter('all', this)">Tout</button>
+    <button class="filter-tab" onclick="applyFilter('alcohol', this)">🍺 Alcool</button>
+    <button class="filter-tab" onclick="applyFilter('soft', this)">🥤 Sans alcool</button>
+    <button class="filter-tab" onclick="applyFilter('hot', this)">☕ Chaud</button>
+    <button class="filter-tab" onclick="applyFilter('snack', this)">🧀 Snacks</button>
+  </div>
+
+  <div class="categories-wrap" id="categories-wrap">
+    <div class="loading"><div class="spinner"></div></div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: LOGIN ═══════════════ -->
+<div class="page" id="page-login">
+  <div class="login-wrap">
+    <div class="login-card anim">
+      <div class="login-title">Espace Admin</div>
+      <div class="login-sub">Carte des boissons · Bar ECAM</div>
+      <div class="login-error" id="login-error">Mot de passe incorrect.</div>
+      <div class="field">
+        <label>Mot de passe</label>
+        <input type="password" id="login-pwd" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
+      </div>
+      <button class="btn-admin btn-full" onclick="doLogin()">Se connecter</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════ PAGE: ADMIN ═══════════════ -->
+<div class="page" id="page-admin">
+  <div class="admin-wrap">
+    <div class="admin-title anim">Dashboard</div>
+    <div class="admin-sub anim d1">Gérer la carte des boissons</div>
+
+    <!-- Import initial data -->
+    <div class="seed-box anim d1">
+      <div class="seed-box-text">Première utilisation ? Importe la carte complète en un clic.</div>
+      <button class="btn-admin btn-admin-secondary" onclick="seedData()" style="white-space:nowrap;flex-shrink:0;">📋 Importer</button>
+    </div>
+
+    <!-- Existing drinks -->
+    <div class="admin-section anim d2">
+      <div class="admin-section-title">Boissons existantes</div>
+      <div id="admin-drinks-list">
+        <div class="loading"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- Add new drink -->
+    <div class="admin-section anim d3">
+      <div class="admin-section-title">Ajouter une boisson</div>
+
+      <div class="field">
+        <label>Nom *</label>
+        <input type="text" id="f-name" placeholder="Ex: Tremens">
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Catégorie *</label>
+          <select id="f-category" onchange="handleCategoryChange('f')">
+            <option value="pression">Bière Pression</option>
+            <option value="bouteille">Bière Bouteille</option>
+            <option value="vin">Vin</option>
+            <option value="froide">Boisson Froide</option>
+            <option value="soda">Soda</option>
+            <option value="chaude">Boisson Chaude</option>
+            <option value="snack">Snack</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Type de boisson</label>
+          <input type="text" id="f-drinkType" placeholder="Ex: Bière Blonde">
+        </div>
+      </div>
+
+      <div class="field">
+        <label>Format de prix *</label>
+        <select id="f-priceType" onchange="handlePriceType('f')">
+          <option value="pression">Pression (25cl / 50cl)</option>
+          <option value="wine">Vin (verre / bouteille)</option>
+          <option value="simple">Prix unique</option>
+        </select>
+      </div>
+
+      <!-- Price blocks -->
+      <div class="price-block show" id="f-pression-price">
+        <div class="field-row">
+          <div class="field"><label>Prix 25cl (€)</label><input type="number" id="f-price25" step="0.1" placeholder="3.5"></div>
+          <div class="field"><label>Prix 50cl (€)</label><input type="number" id="f-price50" step="0.1" placeholder="5.5"></div>
+        </div>
+      </div>
+      <div class="price-block" id="f-wine-price">
+        <div class="field-row">
+          <div class="field"><label>Prix verre (€)</label><input type="number" id="f-priceGlass" step="0.1" placeholder="1.5"></div>
+          <div class="field"><label>Prix bouteille (€)</label><input type="number" id="f-priceBottle" step="0.5" placeholder="8"></div>
+        </div>
+      </div>
+      <div class="price-block" id="f-simple-price">
+        <div class="field"><label>Prix (€) — 0 pour gratuit</label><input type="number" id="f-price" step="0.1" placeholder="0.90"></div>
+      </div>
+
+      <div class="field">
+        <label>Description</label>
+        <textarea id="f-description" placeholder="Décris la boisson, ses arômes..."></textarea>
+      </div>
+      <div class="field">
+        <label>URL de l'image</label>
+        <input type="url" id="f-image" placeholder="https://i.ibb.co/...">
+        <div class="field-hint">Héberge ton image sur imgbb.com (gratuit) et colle le lien ici</div>
+      </div>
+      <div class="field-row">
+        <div class="field">
+          <label>Badge</label>
+          <select id="f-badge">
+            <option value="">Aucun</option>
+            <option value="Bière du mois">Bière du mois</option>
+            <option value="Nouveauté">Nouveauté</option>
+            <option value="Coup de cœur">Coup de cœur</option>
+            <option value="Bon plan">Bon plan</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Disponibilité</label>
+          <select id="f-available">
+            <option value="true">Disponible</option>
+            <option value="false">Indisponible</option>
+          </select>
+        </div>
+      </div>
+      <div class="field">
+        <label>Note spéciale (optionnel)</label>
+        <input type="text" id="f-note" placeholder="Ex: Sirop offert avec toute pression">
+      </div>
+
+      <button class="btn-admin btn-full" id="add-btn" onclick="addDrink()">Ajouter la boisson</button>
+    </div>
+
+    <button class="btn-admin btn-admin-outline btn-full" onclick="doLogout()" style="margin-top:8px;">Se déconnecter</button>
+  </div>
+</div>
+
+<!-- ═══════════════ FLOATING CART ═══════════════ -->
+<button class="cart-fab hidden" id="cart-fab" onclick="openCartModal()">
+  <span class="cart-fab-icon">🍺</span>
+  <span class="cart-fab-label">Mon Plateau</span>
+  <span class="cart-fab-badge" id="cart-fab-badge">0</span>
+</button>
+
+<!-- ═══════════════ MODAL: DRINK DETAIL ═══════════════ -->
+<div class="modal-bg" id="modal-drink-bg" onclick="closeDrinkModal(event)">
+  <div class="modal-sheet" id="modal-drink-content">
+    <div class="modal-handle"></div>
+    <div id="modal-drink-inner"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL: CART ═══════════════ -->
+<div class="modal-bg" id="modal-cart-bg" onclick="closeCartModal(event)">
+  <div class="cart-modal" id="modal-cart-content">
+    <div class="modal-handle"></div>
+    <div id="modal-cart-inner"></div>
+  </div>
+</div>
+
+<!-- ═══════════════ MODAL: EDIT DRINK ═══════════════ -->
+<div class="edit-modal-bg" id="modal-edit-bg" onclick="closeEditModal(event)">
+  <div class="edit-modal-sheet">
+    <div class="modal-handle"></div>
+    <div style="font-family:'Bebas Neue',sans-serif;font-size:26px;color:var(--text);margin-bottom:18px;">Modifier la boisson</div>
+
+    <div class="field"><label>Nom *</label><input type="text" id="e-name"></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Catégorie</label>
+        <select id="e-category" onchange="handleCategoryChange('e')">
+          <option value="pression">Bière Pression</option>
+          <option value="bouteille">Bière Bouteille</option>
+          <option value="vin">Vin</option>
+          <option value="froide">Boisson Froide</option>
+          <option value="soda">Soda</option>
+          <option value="chaude">Boisson Chaude</option>
+          <option value="snack">Snack</option>
+        </select>
+      </div>
+      <div class="field"><label>Type</label><input type="text" id="e-drinkType"></div>
+    </div>
+    <div class="field">
+      <label>Format de prix</label>
+      <select id="e-priceType" onchange="handlePriceType('e')">
+        <option value="pression">Pression (25cl / 50cl)</option>
+        <option value="wine">Vin (verre / bouteille)</option>
+        <option value="simple">Prix unique</option>
+      </select>
+    </div>
+    <div class="price-block" id="e-pression-price">
+      <div class="field-row">
+        <div class="field"><label>Prix 25cl</label><input type="number" id="e-price25" step="0.1"></div>
+        <div class="field"><label>Prix 50cl</label><input type="number" id="e-price50" step="0.1"></div>
+      </div>
+    </div>
+    <div class="price-block" id="e-wine-price">
+      <div class="field-row">
+        <div class="field"><label>Prix verre</label><input type="number" id="e-priceGlass" step="0.1"></div>
+        <div class="field"><label>Prix bouteille</label><input type="number" id="e-priceBottle" step="0.5"></div>
+      </div>
+    </div>
+    <div class="price-block" id="e-simple-price">
+      <div class="field"><label>Prix (€)</label><input type="number" id="e-price" step="0.1"></div>
+    </div>
+    <div class="field"><label>Description</label><textarea id="e-description"></textarea></div>
+    <div class="field"><label>URL Image</label><input type="url" id="e-image"></div>
+    <div class="field-row">
+      <div class="field">
+        <label>Badge</label>
+        <select id="e-badge">
+          <option value="">Aucun</option>
+          <option value="Bière du mois">Bière du mois</option>
+          <option value="Nouveauté">Nouveauté</option>
+          <option value="Coup de cœur">Coup de cœur</option>
+          <option value="Bon plan">Bon plan</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Disponibilité</label>
+        <select id="e-available">
+          <option value="true">Disponible</option>
+          <option value="false">Indisponible</option>
+        </select>
+      </div>
+    </div>
+    <div class="field"><label>Note spéciale</label><input type="text" id="e-note"></div>
+    <div style="display:flex;gap:10px;margin-top:4px;">
+      <button class="btn-admin" style="flex:1;" onclick="saveEditDrink()">Enregistrer</button>
+      <button class="btn-admin btn-admin-outline" onclick="closeEditModal(null)">Annuler</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── FIREBASE ──
+const firebaseConfig={
+  apiKey:"AIzaSyAIQQp4DCQ0Twc6EG86kDMguCUtSpD5TSI",
+  authDomain:"bar-exam-dbc29.firebaseapp.com",
+  databaseURL:"https://bar-exam-dbc29-default-rtdb.europe-west1.firebasedatabase.app",
+  projectId:"bar-exam-dbc29",
+  storageBucket:"bar-exam-dbc29.firebasestorage.app",
+  messagingSenderId:"560058741022",
+  appId:"1:560058741022:web:f87bcb50044da72a39190f"
+};
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+// ── CONSTANTS ──
+const ADMIN_PWD = "barecam2026";
+
+const CAT_CONFIG = {
+  pression:  { label:'Bières Pression',     icon:'🍺', note:'🎉 Sirop offert avec toute bière pression !' },
+  bouteille: { label:'Bières Bouteilles',   icon:'🍾', note:'' },
+  vin:       { label:'Vins',                icon:'🍷', note:'' },
+  froide:    { label:'Boissons Froides',    icon:'🧊', note:'' },
+  soda:      { label:'Sodas & Énergisants', icon:'🥤', note:'' },
+  chaude:    { label:'Boissons Chaudes',    icon:'☕', note:'' },
+  snack:     { label:'Snacks',              icon:'🧀', note:'' }
+};
+const CAT_ORDER = ['pression','bouteille','vin','froide','soda','chaude','snack'];
+
+const FILTER_MAP = {
+  all:     ['pression','bouteille','vin','froide','soda','chaude','snack'],
+  alcohol: ['pression','bouteille','vin'],
+  soft:    ['froide','soda'],
+  hot:     ['chaude'],
+  snack:   ['snack']
+};
+
+const SEED = [
+  {name:'Tremens',category:'pression',drinkType:'Bière Blonde Forte',priceType:'pression',price25:3.5,price50:5.5,description:'Bière belge blonde forte aux notes fruitées et légèrement épicées. Dorée, fraîche et généreuse.',badge:'',available:true,note:'',sortOrder:0},
+  {name:'Kronenbourg',category:'pression',drinkType:'Bière Lager',priceType:'pression',price25:2.5,price50:4.5,description:'La bière française la plus emblématique. Légère, fraîche et rafraîchissante, un classique intemporel.',badge:'',available:true,note:'',sortOrder:1},
+  {name:'Mordue',category:'pression',drinkType:'Bière Ambrée',priceType:'pression',price25:3.5,price50:5.5,description:'Bière ambrée de caractère aux notes maltées et caramélisées. Ronde et chaleureuse.',badge:'',available:true,note:'',sortOrder:2},
+  {name:'1664 Blanche',category:'pression',drinkType:'Bière Blanche',priceType:'pression',price25:3.5,price50:5.5,description:'Bière de blé légère et fruitée, idéale pour les amateurs de bières douces et aromatiques.',badge:'',available:true,note:'',sortOrder:3},
+  {name:'Bière du mois',category:'pression',drinkType:'Sélection spéciale',priceType:'pression',price25:3.5,price50:5.5,description:'Notre coup de cœur du moment ! Renouvelée chaque mois pour vous faire découvrir de nouvelles saveurs. Demandez-nous au bar.',badge:'Bière du mois',available:true,note:'Sélection renouvelée chaque mois',sortOrder:4},
+  {name:'Desperados',category:'bouteille',drinkType:'Bière aromatisée Tequila',priceType:'simple',price:4,description:'La bière à la tequila par excellence. Légèrement épicée, fruitée et ultra-rafraîchissante.',badge:'',available:true,note:'',sortOrder:0},
+  {name:'Corona',category:'bouteille',drinkType:'Bière Lager mexicaine',priceType:'simple',price:4,description:'La célébrissime bière mexicaine. Légère et désaltérante, à savourer avec ou sans citron.',badge:'',available:true,note:'',sortOrder:1},
+  {name:'Paix Dieux',category:'bouteille',drinkType:'Bière Triple Belge',priceType:'simple',price:4,description:'Triple belge artisanale à forte teneur en alcool (10%). Riche, miellée et complexe.',badge:'',available:true,note:'',sortOrder:2},
+  {name:'Skoll',category:'bouteille',drinkType:'Bière Lager',priceType:'simple',price:4,description:'Bière légère et accessible, idéale pour les soirées entre amis. Facile à boire et rafraîchissante.',badge:'',available:true,note:'',sortOrder:3},
+  {name:'Brewdog IPA',category:'bouteille',drinkType:'India Pale Ale',priceType:'simple',price:4,description:"India Pale Ale de la brasserie écossaise BrewDog. Très houblonnée, amère avec des arômes d'agrumes et de résine.",badge:'',available:true,note:'',sortOrder:4},
+  {name:'Pietra Blanche',category:'bouteille',drinkType:'Bière Blanche Corse',priceType:'simple',price:4,description:'Bière blanche de Corse, légère et aromatique avec une touche de maquis insulaire.',badge:'',available:true,note:'',sortOrder:5},
+  {name:'Kastel Red',category:'bouteille',drinkType:'Bière Rouge',priceType:'simple',price:4,description:'Bière rouge aux notes maltées et caramélisées, douce et accessible. Idéale pour les amateurs de bières rondes.',badge:'',available:true,note:'',sortOrder:6},
+  {name:'Goudale',category:'bouteille',drinkType:'Bière Blonde',priceType:'simple',price:4,description:"Bière blonde artisanale du Nord de la France, riche et généreuse avec une belle mousse crémeuse.",badge:'',available:true,note:'',sortOrder:7},
+  {name:'Chouffe Blonde',category:'bouteille',drinkType:'Bière Blonde Belge',priceType:'simple',price:4,description:'La Chouffe est une bière blonde belge à fermentation haute, légèrement épicée et fruitée. Un classique belge.',badge:'',available:true,note:'',sortOrder:8},
+  {name:'Lagunitas IPA',category:'bouteille',drinkType:'IPA américaine',priceType:'simple',price:4,description:"IPA californienne très houblonnée. Arômes d'agrumes, de pin et de fruits tropicaux. Pour les vrais amateurs.",badge:'',available:true,note:'',sortOrder:9},
+  {name:'Rince Cochon',category:'bouteille',drinkType:'Bière Rouge Forte',priceType:'simple',price:4,description:'Bière rouge belge forte (8.4%) au caractère prononcé et aux notes de caramel. Pas pour les timides !',badge:'',available:true,note:'',sortOrder:10},
+  {name:'La Citadelle',category:'vin',drinkType:'Vin Blanc',priceType:'wine',priceGlass:1.5,priceBottle:8,description:'Vin blanc sec et frais, parfait à l\'apéritif ou en accompagnement. Notes florales et fruitées.',badge:'',available:true,note:'',sortOrder:0},
+  {name:'Cibadies',category:'vin',drinkType:'Vin Blanc',priceType:'wine',priceGlass:1.5,priceBottle:8,description:'Vin blanc du Languedoc, souple et aromatique. Idéal pour accompagner nos snacks.',badge:'',available:true,note:'',sortOrder:1},
+  {name:'Padulone',category:'vin',drinkType:'Vin Rosé',priceType:'wine',priceGlass:1.5,priceBottle:8,description:'Vin rosé corse, léger et fruité. Une touche estivale pour toutes les occasions.',badge:'',available:true,note:'',sortOrder:2},
+  {name:'Beaujolais',category:'vin',drinkType:'Vin Rouge',priceType:'wine',priceGlass:1.5,priceBottle:8,description:'Beaujolais souple et fruité, aux arômes de cerise et de framboise. Un vin connu et apprécié.',badge:'',available:true,note:'',sortOrder:3},
+  {name:'Sirop au choix',category:'froide',drinkType:'Sirop',priceType:'simple',price:0,description:'Pêche · Grenadine · Passion · Violette · Menthe · Kiwi · Citron. Peut accompagner toute bière pression gratuitement !',badge:'',available:true,note:'Gratuit avec une bière pression !',sortOrder:0},
+  {name:'Diabolo',category:'froide',drinkType:'Diabolo',priceType:'simple',price:0.6,description:'Limonade + sirop de votre choix (pêche, grenadine, passion, violette, menthe, kiwi, citron). Frais et festif.',badge:'',available:true,note:'',sortOrder:1},
+  {name:'Coca-Cola',category:'soda',drinkType:'Soda',priceType:'simple',price:0.9,description:'Coca normal, sans sucre ou cherry. Précisez votre choix au bar. Le classique indétrônable.',badge:'',available:true,note:'Normal · Zero · Cherry',sortOrder:0},
+  {name:'Fanta',category:'soda',drinkType:'Soda',priceType:'simple',price:0.9,description:'Fanta orange, pétillant et fruité. Fraîcheur garantie.',badge:'',available:true,note:'',sortOrder:1},
+  {name:'Oasis Pomme/Cassis',category:'soda',drinkType:'Jus pétillant',priceType:'simple',price:0.9,description:'Oasis pomme et cassis, doux, fruité et pétillant. Un favori.',badge:'',available:true,note:'',sortOrder:2},
+  {name:'Oasis Tropicale',category:'soda',drinkType:'Jus pétillant',priceType:'simple',price:0.9,description:"Oasis tropical, saveurs exotiques et ensoleillées. Ferme les yeux et imagine la plage.",badge:'',available:true,note:'',sortOrder:3},
+  {name:'Oasis Pomme/Poire',category:'soda',drinkType:'Jus pétillant',priceType:'simple',price:0.9,description:'Oasis pomme et poire, légèrement sucré et très agréable.',badge:'',available:true,note:'',sortOrder:4},
+  {name:'Schweppes Agrumes',category:'soda',drinkType:'Tonic',priceType:'simple',price:0.9,description:'Schweppes aux agrumes, légèrement amer et pétillant. Parfait seul ou avec un cocktail.',badge:'',available:true,note:'',sortOrder:5},
+  {name:'Orangina',category:'soda',drinkType:'Soda',priceType:'simple',price:0.9,description:"Orangina avec ses vraies pulpes d'orange. Secoue-la avant de la boire !",badge:'',available:true,note:'',sortOrder:6},
+  {name:'Ice Tea',category:'soda',drinkType:'Thé glacé',priceType:'simple',price:0.9,description:'Ice Tea pêche, fruité et rafraîchissant. La douceur du thé froid.',badge:'',available:true,note:'',sortOrder:7},
+  {name:'Fuze Tea',category:'soda',drinkType:'Thé glacé',priceType:'simple',price:0.9,description:'Fuze Tea, mélange de thé vert et de jus de fruit. Léger et désaltérant.',badge:'',available:true,note:'',sortOrder:8},
+  {name:'Redbull',category:'soda',drinkType:'Boisson énergisante',priceType:'simple',price:2,description:"Red Bull energy drink. Te donne des ailes pour finir ta nuit correctement.",badge:'',available:true,note:'',sortOrder:9},
+  {name:'Café court',category:'chaude',drinkType:'Café',priceType:'simple',price:0.6,description:'Expresso serré, intense et corsé. Pour repartir du bon pied.',badge:'',available:true,note:'',sortOrder:0},
+  {name:'Café allongé',category:'chaude',drinkType:'Café',priceType:'simple',price:0.6,description:'Expresso allongé avec plus d\'eau, plus doux et digeste.',badge:'',available:true,note:'',sortOrder:1},
+  {name:'Café double',category:'chaude',drinkType:'Café',priceType:'simple',price:1,description:'Double dose d\'expresso pour les vrais warriors de la caféine.',badge:'',available:true,note:'',sortOrder:2},
+  {name:'Cappuccino',category:'chaude',drinkType:'Café',priceType:'simple',price:0.6,description:'Expresso avec lait moussu, crémeux et réconfortant. Idéal pour une pause.',badge:'',available:true,note:'',sortOrder:3},
+  {name:'Thé',category:'chaude',drinkType:'Thé chaud',priceType:'simple',price:0.6,description:'Vert · Citron · Menthe · Earl Grey. Précisez votre choix au bar.',badge:'',available:true,note:'Vert · Citron · Menthe · Earl Grey',sortOrder:4},
+  {name:'Chocolat chaud',category:'chaude',drinkType:'Chocolat',priceType:'simple',price:0.5,description:'Chocolat chaud onctueux, parfait pour les soirées fraîches. Doux et réconfortant.',badge:'',available:true,note:'',sortOrder:5},
+  {name:'Paté',category:'snack',drinkType:'Snack',priceType:'simple',price:4,description:'Plateau de paté artisanal, généreux et savoureux. À partager ou pas.',badge:'',available:true,note:'',sortOrder:0},
+  {name:'Saucisson',category:'snack',drinkType:'Snack',priceType:'simple',price:4,description:'Plateau de saucisson tranché à la main. Robuste et authentique.',badge:'',available:true,note:'',sortOrder:1},
+  {name:'Paté + Saucisson',category:'snack',drinkType:'Snack',priceType:'simple',price:7,description:'Le duo gagnant ! Paté ET saucisson pour 7€ au lieu de 8€. La meilleure affaire du bar.',badge:'Bon plan',available:true,note:'Économise 1€ par rapport aux deux séparés !',sortOrder:2}
+];
+
+// ── STATE ──
+let allDrinks = {};
+let cart = [];
+let currentFilter = 'all';
+let openCats = new Set();
+let editingDrinkId = null;
+let isLoggedIn = false;
+let currentDrinkId = null;
+
+// ── PAGES ──
+function showPage(id) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.getElementById('page-'+id).classList.add('active');
+  window.scrollTo(0,0);
+}
+function goHome() {
+  showPage('home');
+  loadAndRenderHome();
+}
+function goAdmin() {
+  if (isLoggedIn) { showPage('admin'); loadAdminDrinks(); }
+  else showPage('login');
+}
+function doLogin() {
+  const pwd = document.getElementById('login-pwd').value;
+  const errEl = document.getElementById('login-error');
+  if (pwd === ADMIN_PWD) {
+    isLoggedIn = true;
+    document.getElementById('login-pwd').value = '';
+    errEl.style.display = 'none';
+    document.getElementById('adminNavBtn').textContent = 'Dashboard';
+    showPage('admin');
+    loadAdminDrinks();
+  } else { errEl.style.display = 'block'; }
+}
+function doLogout() {
+  isLoggedIn = false;
+  document.getElementById('adminNavBtn').textContent = 'Admin';
+  showToast('Déconnecté');
+  goHome();
+}
+
+// ── UTILS ──
+function showToast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast' + (type ? ' '+type : '');
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+function fmtPrice(p) {
+  const n = parseFloat(p);
+  if (isNaN(n) || n === 0) return 'Gratuit';
+  return n.toFixed(2).replace('.',',') + '€';
+}
+function fmtCardPrice(d) {
+  if (d.priceType === 'pression') return 'dès ' + fmtPrice(d.price25);
+  if (d.priceType === 'wine') return 'dès ' + fmtPrice(d.priceGlass);
+  return fmtPrice(d.price);
+}
+function fmtDetailPrice(d) {
+  if (d.priceType === 'pression') return `25cl · ${fmtPrice(d.price25)}  ·  50cl · ${fmtPrice(d.price50)}`;
+  if (d.priceType === 'wine') return `Verre · ${fmtPrice(d.priceGlass)}  ·  Bouteille · ${fmtPrice(d.priceBottle)}`;
+  return fmtPrice(d.price);
+}
+function badgeClass(b) {
+  if (!b) return '';
+  if (b === 'Nouveauté') return 'new';
+  if (b === 'Coup de cœur') return 'coup';
+  if (b === 'Bon plan') return 'bon';
+  return '';
+}
+function getCatIcon(catId) {
+  return (CAT_CONFIG[catId] || {}).icon || '🍹';
+}
+
+// ── LOAD HOME ──
+function loadAndRenderHome() {
+  const wrap = document.getElementById('categories-wrap');
+  wrap.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  db.ref('drinks').once('value')
+    .then(snap => {
+      allDrinks = snap.val() || {};
+      renderCategories();
+    })
+    .catch(() => {
+      wrap.innerHTML = '<div class="empty-state"><p>Erreur de connexion.<br>Vérifiez votre connexion internet.</p></div>';
+    });
+}
+
+function renderCategories() {
+  const wrap = document.getElementById('categories-wrap');
+  const allowed = FILTER_MAP[currentFilter] || CAT_ORDER;
+  const grouped = {};
+  Object.entries(allDrinks).forEach(([id,d]) => {
+    if (!grouped[d.category]) grouped[d.category] = [];
+    grouped[d.category].push([id,d]);
+  });
+  CAT_ORDER.forEach(cat => {
+    if (grouped[cat]) {
+      grouped[cat].sort((a,b) => (a[1].sortOrder||0) - (b[1].sortOrder||0));
+    }
+  });
+
+  const visibleCats = CAT_ORDER.filter(cat => {
+    return grouped[cat] && grouped[cat].length > 0 && allowed.includes(cat);
+  });
+
+  if (visibleCats.length === 0) {
+    wrap.innerHTML = '<div class="empty-state"><div class="empty-icon">🎵</div><p>Aucune boisson disponible.<br>Revenez bientôt !</p></div>';
+    return;
+  }
+
+  wrap.innerHTML = '';
+  visibleCats.forEach((cat, i) => {
+    const cfg = CAT_CONFIG[cat];
+    const drinks = grouped[cat] || [];
+    const availCount = drinks.filter(([,d]) => d.available !== false).length;
+    const isOpen = openCats.has(cat);
+
+    const section = document.createElement('div');
+    section.className = 'cat-section anim';
+    section.style.animationDelay = (i * 0.06) + 's';
+    section.dataset.cat = cat;
+    section.innerHTML =
+      `<div class="cat-header ${isOpen ? 'open' : ''}" onclick="toggleCategory('${cat}')">
+        <div class="cat-icon">${cfg.icon}</div>
+        <div class="cat-info">
+          <div class="cat-name">${cfg.label}</div>
+          <div class="cat-count">${availCount} boisson${availCount > 1 ? 's' : ''}</div>
+        </div>
+        <div class="cat-chevron">▾</div>
+      </div>
+      <div class="cat-body ${isOpen ? 'open' : ''}">
+        <div class="drinks-grid">
+          ${drinks.map(([id,d]) => renderDrinkCard(id, d, cat)).join('')}
+        </div>
+        ${cfg.note ? `<div class="cat-note">${cfg.note}</div>` : ''}
+      </div>`;
+    wrap.appendChild(section);
+  });
+}
+
+function toggleCategory(cat) {
+  const section = document.querySelector(`.cat-section[data-cat="${cat}"]`);
+  if (!section) return;
+  const header = section.querySelector('.cat-header');
+  const body = section.querySelector('.cat-body');
+  const isOpen = header.classList.contains('open');
+  if (isOpen) { header.classList.remove('open'); body.classList.remove('open'); openCats.delete(cat); }
+  else { header.classList.add('open'); body.classList.add('open'); openCats.add(cat); }
+}
+
+function renderDrinkCard(id, d, cat) {
+  const unavail = d.available === false;
+  const imgHtml = d.image
+    ? `<img class="drink-card-img" src="${d.image}" alt="${d.name}" onerror="this.outerHTML='<div class=\\'drink-card-placeholder\\" style=\\'background:var(--surface2)\\">${getCatIcon(cat)}</div>'">`
+    : `<div class="drink-card-placeholder" style="background:var(--surface2);">${getCatIcon(cat)}</div>`;
+  const badgeHtml = d.badge ? `<div class="drink-badge ${badgeClass(d.badge)}">${d.badge}</div>` : '';
+  return `<div class="drink-card ${unavail ? 'unavailable' : ''}">
+    <div class="drink-card-main" onclick="openDrinkModal('${id}')">
+      ${imgHtml}
+      <div class="drink-card-body">
+        ${badgeHtml}
+        <div class="drink-card-name">${d.name}</div>
+        <div class="drink-card-type">${d.drinkType || ''}</div>
+        <div class="drink-card-price">${fmtCardPrice(d)}</div>
+      </div>
+    </div>
+    <div class="drink-card-footer">
+      ${unavail
+        ? '<span class="drink-unavail-label">Indisponible</span>'
+        : `<span style="font-size:11px;color:var(--muted);">Ajouter</span>`}
+      <button class="add-btn" id="add-btn-${id}"
+        ${unavail ? 'disabled' : `onclick="handleAddToCart('${id}')"`}
+        title="Ajouter au plateau">+</button>
+    </div>
+  </div>`;
+}
+
+// ── FILTER ──
+function applyFilter(filter, btn) {
+  currentFilter = filter;
+  document.querySelectorAll('.filter-tab').forEach(t => t.classList.remove('active'));
+  if (btn) btn.classList.add('active');
+  openCats.clear();
+  renderCategories();
+}
+
+// ── DRINK DETAIL MODAL ──
+function openDrinkModal(id) {
+  currentDrinkId = id;
+  const d = allDrinks[id];
+  if (!d) return;
+  const cat = d.category;
+  const unavail = d.available === false;
+
+  const imgHtml = d.image
+    ? `<img class="detail-img" src="${d.image}" alt="${d.name}" onerror="this.outerHTML='<div class=\\'detail-placeholder\\" style=\\'background:var(--surface2)\\">${getCatIcon(cat)}</div>'">`
+    : `<div class="detail-placeholder" style="background:var(--surface2);">${getCatIcon(cat)}</div>`;
+
+  const badgeHtml = d.badge ? `<div class="detail-badge ${badgeClass(d.badge)}">${d.badge}</div><br>` : '';
+
+  let addSection = '';
+  if (unavail) {
+    addSection = `<div class="detail-unavail">😔 Cette boisson est indisponible pour le moment.</div>`;
+  } else if (d.priceType === 'pression') {
+    addSection = `
+      <div class="detail-add-section">
+        <div class="detail-add-label">Choisir votre format</div>
+        <div class="size-options">
+          <div class="size-option" onclick="addToCart('${id}','25cl',${d.price25})">
+            <div class="size-option-size">25 cl</div>
+            <div class="size-option-price">${fmtPrice(d.price25)}</div>
+          </div>
+          <div class="size-option" onclick="addToCart('${id}','50cl',${d.price50})">
+            <div class="size-option-size">50 cl</div>
+            <div class="size-option-price">${fmtPrice(d.price50)}</div>
+          </div>
+        </div>
+      </div>`;
+  } else if (d.priceType === 'wine') {
+    addSection = `
+      <div class="detail-add-section">
+        <div class="detail-add-label">Choisir votre format</div>
+        <div class="size-options">
+          <div class="size-option" onclick="addToCart('${id}','Verre',${d.priceGlass})">
+            <div class="size-option-size">Verre</div>
+            <div class="size-option-price">${fmtPrice(d.priceGlass)}</div>
+          </div>
+          <div class="size-option" onclick="addToCart('${id}','Bouteille',${d.priceBottle})">
+            <div class="size-option-size">Bouteille</div>
+            <div class="size-option-price">${fmtPrice(d.priceBottle)}</div>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    addSection = `
+      <button class="simple-add-btn" onclick="addToCart('${id}',null,${d.price})">
+        Ajouter au plateau · ${fmtPrice(d.price)}
+      </button>`;
+  }
+
+  document.getElementById('modal-drink-inner').innerHTML =
+    imgHtml +
+    badgeHtml +
+    `<div class="detail-name">${d.name}</div>
+    <div class="detail-type">${d.drinkType || ''} ${d.priceType !== 'simple' ? '· ' + fmtDetailPrice(d) : '· ' + fmtPrice(d.price)}</div>
+    ${d.description ? `<div class="detail-desc">${d.description}</div>` : ''}
+    ${d.note ? `<div class="detail-note">💡 ${d.note}</div>` : ''}
+    ${addSection}`;
+
+  document.getElementById('modal-drink-bg').classList.add('open');
+}
+function closeDrinkModal(e) {
+  if (!e || e.target === document.getElementById('modal-drink-bg')) {
+    document.getElementById('modal-drink-bg').classList.remove('open');
+    currentDrinkId = null;
+  }
+}
+
+// ── CART ──
+function handleAddToCart(id) {
+  const d = allDrinks[id];
+  if (!d || d.available === false) return;
+  if (d.priceType === 'pression') {
+    // Open detail modal pre-scrolled to size options
+    openDrinkModal(id);
+  } else if (d.priceType === 'wine') {
+    openDrinkModal(id);
+  } else {
+    addToCart(id, null, d.price);
+  }
+}
+
+function addToCart(drinkId, variant, price) {
+  const d = allDrinks[drinkId];
+  if (!d) return;
+  const key = drinkId + (variant ? '-' + variant : '');
+  const existing = cart.find(i => i.key === key);
+  if (existing) { existing.qty++; }
+  else { cart.push({ key, drinkId, name: d.name, variant, price: parseFloat(price), qty: 1, cat: d.category }); }
+
+  updateCartFab();
+  animateCartFab();
+  flashAddBtn(drinkId);
+  showToast(`${d.name}${variant ? ' (' + variant + ')' : ''} ajouté ! 🍺`, 'success');
+
+  // Close drink modal
+  document.getElementById('modal-drink-bg').classList.remove('open');
+  currentDrinkId = null;
+
+  // Re-render cart if open
+  if (document.getElementById('modal-cart-bg').classList.contains('open')) {
+    renderCartModal();
+  }
+}
+
+function flashAddBtn(drinkId) {
+  const btn = document.getElementById('add-btn-' + drinkId);
+  if (!btn) return;
+  btn.classList.add('added');
+  btn.textContent = '✓';
+  setTimeout(() => { btn.classList.remove('added'); btn.textContent = '+'; }, 1200);
+}
+
+function updateQty(key, delta) {
+  const item = cart.find(i => i.key === key);
+  if (!item) return;
+  item.qty += delta;
+  if (item.qty <= 0) cart = cart.filter(i => i.key !== key);
+  updateCartFab();
+  renderCartModal();
+}
+function removeFromCart(key) {
+  cart = cart.filter(i => i.key !== key);
+  updateCartFab();
+  renderCartModal();
+}
+function clearCart() {
+  if (!confirm('Vider tout le plateau ?')) return;
+  cart = [];
+  updateCartFab();
+  renderCartModal();
+}
+function calcTotal() {
+  return cart.reduce((s, i) => s + i.price * i.qty, 0);
+}
+function totalQty() {
+  return cart.reduce((s, i) => s + i.qty, 0);
+}
+function updateCartFab() {
+  const fab = document.getElementById('cart-fab');
+  const n = totalQty();
+  if (n === 0) { fab.classList.add('hidden'); }
+  else { fab.classList.remove('hidden'); document.getElementById('cart-fab-badge').textContent = n; }
+}
+function animateCartFab() {
+  const fab = document.getElementById('cart-fab');
+  fab.classList.remove('pulse-anim');
+  void fab.offsetWidth;
+  fab.classList.add('pulse-anim');
+  setTimeout(() => fab.classList.remove('pulse-anim'), 400);
+}
+
+function openCartModal() {
+  renderCartModal();
+  document.getElementById('modal-cart-bg').classList.add('open');
+}
+function closeCartModal(e) {
+  if (!e || e.target === document.getElementById('modal-cart-bg')) {
+    document.getElementById('modal-cart-bg').classList.remove('open');
+  }
+}
+function renderCartModal() {
+  const inner = document.getElementById('modal-cart-inner');
+  const n = totalQty();
+  const total = calcTotal();
+
+  if (cart.length === 0) {
+    inner.innerHTML = `
+      <div class="cart-modal-header">
+        <div class="cart-modal-title">Mon Plateau 🍺</div>
+      </div>
+      <div class="cart-empty">
+        <div class="cart-empty-icon">🛸</div>
+        <div class="cart-empty-text">Votre plateau est vide.<br>Explorez la carte et ajoutez vos coups de cœur !</div>
+      </div>`;
+    return;
+  }
+
+  const itemsHtml = cart.map(item => {
+    const catIcon = getCatIcon(item.cat);
+    const lineTotal = (item.price * item.qty).toFixed(2).replace('.',',') + '€';
+    return `<div class="cart-item">
+      <div class="cart-item-icon">${catIcon}</div>
+      <div class="cart-item-info">
+        <div class="cart-item-name">${item.name}</div>
+        ${item.variant ? `<div class="cart-item-variant">${item.variant}</div>` : ''}
+        <div class="cart-item-price">${fmtPrice(item.price)} × ${item.qty} = ${lineTotal}</div>
+      </div>
+      <div class="cart-qty-ctrl">
+        <button class="qty-btn" onclick="updateQty('${item.key}', -1)">−</button>
+        <span class="qty-num">${item.qty}</span>
+        <button class="qty-btn" onclick="updateQty('${item.key}', 1)">+</button>
+      </div>
+    </div>`;
+  }).join('');
+
+  inner.innerHTML = `
+    <div class="cart-modal-header">
+      <div class="cart-modal-title">Mon Plateau 🍺</div>
+      <div class="cart-modal-sub">${n} article${n > 1 ? 's' : ''}</div>
+    </div>
+    <div class="cart-divider"></div>
+    <div class="cart-items">${itemsHtml}</div>
+    <div class="cart-total-box">
+      <div class="cart-total-label">Total à régler</div>
+      <div class="cart-total-val">${total.toFixed(2).replace('.',',')}€</div>
+    </div>
+    <div class="cart-hint">📍 Présentez ce plateau au bar pour commander.<br>Le paiement s'effectue sur place.</div>
+    <button class="cart-clear-btn" onclick="clearCart()">🗑️ Vider le plateau</button>`;
+}
+
+// ── ADMIN ──
+function loadAdminDrinks() {
+  const list = document.getElementById('admin-drinks-list');
+  list.innerHTML = '<div class="loading"><div class="spinner"></div></div>';
+  db.ref('drinks').once('value')
+    .then(snap => {
+      allDrinks = snap.val() || {};
+      const grouped = {};
+      Object.entries(allDrinks).forEach(([id,d]) => {
+        if (!grouped[d.category]) grouped[d.category] = [];
+        grouped[d.category].push([id,d]);
+      });
+      if (Object.keys(allDrinks).length === 0) {
+        list.innerHTML = '<p style="color:var(--muted);font-size:14px;">Aucune boisson. Utilisez le bouton "Importer" ou ajoutez manuellement.</p>';
+        return;
+      }
+      let html = '';
+      CAT_ORDER.forEach(cat => {
+        const drinks = grouped[cat];
+        if (!drinks || drinks.length === 0) return;
+        drinks.sort((a,b) => (a[1].sortOrder||0) - (b[1].sortOrder||0));
+        const cfg = CAT_CONFIG[cat];
+        html += `<div class="admin-cat-group">
+          <div class="admin-cat-label">${cfg.icon} ${cfg.label}</div>
+          ${drinks.map(([id,d]) => {
+            const priceStr = d.priceType === 'pression' ? `${fmtPrice(d.price25)} / ${fmtPrice(d.price50)}` :
+                             d.priceType === 'wine' ? `${fmtPrice(d.priceGlass)} / ${fmtPrice(d.priceBottle)}` :
+                             fmtPrice(d.price);
+            return `<div class="admin-drink-item ${d.available === false ? 'unavailable-item' : ''}">
+              <div class="admin-drink-info">
+                <div class="admin-drink-name">${d.name} ${d.badge ? `<span style="font-size:10px;color:var(--amber);">[${d.badge}]</span>` : ''}</div>
+                <div class="admin-drink-meta">${d.drinkType || '—'} · ${priceStr} · ${d.available === false ? '🔴 Indisponible' : '🟢 Disponible'}</div>
+              </div>
+              <div class="admin-drink-actions">
+                <button class="btn-icon btn-icon-toggle" onclick="toggleAvail('${id}')" title="${d.available === false ? 'Rendre disponible' : 'Rendre indisponible'}">${d.available === false ? '✓' : '⊘'}</button>
+                <button class="btn-icon" onclick="openEditDrink('${id}')">Modifier</button>
+                <button class="btn-icon btn-icon-danger" onclick="deleteDrink('${id}')">Suppr.</button>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`;
+      });
+      list.innerHTML = html;
+    })
+    .catch(err => {
+      list.innerHTML = `<p style="color:var(--red);font-size:13px;">Erreur : ${err.message}</p>`;
+    });
+}
+
+function toggleAvail(id) {
+  const d = allDrinks[id];
+  if (!d) return;
+  const newVal = d.available === false ? true : false;
+  db.ref('drinks/'+id).update({ available: newVal })
+    .then(() => { showToast(newVal ? 'Boisson disponible' : 'Boisson masquée', 'success'); loadAdminDrinks(); })
+    .catch(err => showToast('Erreur : '+err.message, 'error'));
+}
+
+function addDrink() {
+  const name = document.getElementById('f-name').value.trim();
+  if (!name) { showToast('Le nom est requis', 'error'); return; }
+  const cat = document.getElementById('f-category').value;
+  const pt = document.getElementById('f-priceType').value;
+
+  let priceData = {};
+  if (pt === 'pression') {
+    const p25 = parseFloat(document.getElementById('f-price25').value);
+    const p50 = parseFloat(document.getElementById('f-price50').value);
+    if (isNaN(p25) || isNaN(p50)) { showToast('Renseignez les deux prix pression', 'error'); return; }
+    priceData = { price25: p25, price50: p50 };
+  } else if (pt === 'wine') {
+    const pg = parseFloat(document.getElementById('f-priceGlass').value);
+    const pb = parseFloat(document.getElementById('f-priceBottle').value);
+    if (isNaN(pg) || isNaN(pb)) { showToast('Renseignez les deux prix vin', 'error'); return; }
+    priceData = { priceGlass: pg, priceBottle: pb };
+  } else {
+    const p = parseFloat(document.getElementById('f-price').value);
+    priceData = { price: isNaN(p) ? 0 : p };
+  }
+
+  const data = {
+    name,
+    category: cat,
+    drinkType: document.getElementById('f-drinkType').value.trim(),
+    priceType: pt,
+    ...priceData,
+    description: document.getElementById('f-description').value.trim(),
+    image: document.getElementById('f-image').value.trim(),
+    badge: document.getElementById('f-badge').value,
+    available: document.getElementById('f-available').value === 'true',
+    note: document.getElementById('f-note').value.trim(),
+    sortOrder: Date.now(),
+    createdAt: Date.now()
+  };
+
+  const btn = document.getElementById('add-btn');
+  btn.textContent = 'Ajout en cours...'; btn.disabled = true;
+
+  db.ref('drinks').push(data)
+    .then(() => {
+      showToast('Boisson ajoutée !', 'success');
+      ['f-name','f-drinkType','f-description','f-image','f-note','f-price25','f-price50','f-priceGlass','f-priceBottle','f-price'].forEach(id => {
+        const el = document.getElementById(id);
+        if (el) el.value = '';
+      });
+      btn.textContent = 'Ajouter la boisson'; btn.disabled = false;
+      loadAdminDrinks();
+    })
+    .catch(err => {
+      showToast('Erreur : '+err.message, 'error');
+      btn.textContent = 'Ajouter la boisson'; btn.disabled = false;
+    });
+}
+
+function deleteDrink(id) {
+  const d = allDrinks[id];
+  if (!confirm(`Supprimer "${d ? d.name : 'cette boisson'}" définitivement ?`)) return;
+  db.ref('drinks/'+id).remove()
+    .then(() => { showToast('Boisson supprimée', 'success'); loadAdminDrinks(); })
+    .catch(err => showToast('Erreur : '+err.message, 'error'));
+}
+
+function openEditDrink(id) {
+  const d = allDrinks[id];
+  if (!d) return;
+  editingDrinkId = id;
+  document.getElementById('e-name').value = d.name || '';
+  document.getElementById('e-category').value = d.category || 'pression';
+  document.getElementById('e-drinkType').value = d.drinkType || '';
+  document.getElementById('e-priceType').value = d.priceType || 'simple';
+  document.getElementById('e-price25').value = d.price25 || '';
+  document.getElementById('e-price50').value = d.price50 || '';
+  document.getElementById('e-priceGlass').value = d.priceGlass || '';
+  document.getElementById('e-priceBottle').value = d.priceBottle || '';
+  document.getElementById('e-price').value = d.price !== undefined ? d.price : '';
+  document.getElementById('e-description').value = d.description || '';
+  document.getElementById('e-image').value = d.image || '';
+  document.getElementById('e-badge').value = d.badge || '';
+  document.getElementById('e-available').value = d.available === false ? 'false' : 'true';
+  document.getElementById('e-note').value = d.note || '';
+  handlePriceType('e');
+  document.getElementById('modal-edit-bg').classList.add('open');
+}
+function closeEditModal(e) {
+  if (!e || e.target === document.getElementById('modal-edit-bg')) {
+    document.getElementById('modal-edit-bg').classList.remove('open');
+    editingDrinkId = null;
+  }
+}
+function saveEditDrink() {
+  if (!editingDrinkId) return;
+  const name = document.getElementById('e-name').value.trim();
+  if (!name) { showToast('Le nom est requis', 'error'); return; }
+  const pt = document.getElementById('e-priceType').value;
+
+  let priceData = {};
+  if (pt === 'pression') {
+    priceData = { price25: parseFloat(document.getElementById('e-price25').value)||0, price50: parseFloat(document.getElementById('e-price50').value)||0 };
+  } else if (pt === 'wine') {
+    priceData = { priceGlass: parseFloat(document.getElementById('e-priceGlass').value)||0, priceBottle: parseFloat(document.getElementById('e-priceBottle').value)||0 };
+  } else {
+    priceData = { price: parseFloat(document.getElementById('e-price').value)||0 };
+  }
+
+  db.ref('drinks/'+editingDrinkId).update({
+    name,
+    category: document.getElementById('e-category').value,
+    drinkType: document.getElementById('e-drinkType').value.trim(),
+    priceType: pt,
+    ...priceData,
+    description: document.getElementById('e-description').value.trim(),
+    image: document.getElementById('e-image').value.trim(),
+    badge: document.getElementById('e-badge').value,
+    available: document.getElementById('e-available').value === 'true',
+    note: document.getElementById('e-note').value.trim(),
+  })
+  .then(() => {
+    closeEditModal(null);
+    showToast('Boisson modifiée !', 'success');
+    loadAdminDrinks();
+  })
+  .catch(err => showToast('Erreur : '+err.message, 'error'));
+}
+
+// ── PRICE TYPE SHOW/HIDE ──
+function handlePriceType(prefix) {
+  const pt = document.getElementById(prefix+'-priceType').value;
+  document.getElementById(prefix+'-pression-price').className = 'price-block' + (pt === 'pression' ? ' show' : '');
+  document.getElementById(prefix+'-wine-price').className = 'price-block' + (pt === 'wine' ? ' show' : '');
+  document.getElementById(prefix+'-simple-price').className = 'price-block' + (pt === 'simple' ? ' show' : '');
+}
+function handleCategoryChange(prefix) {
+  const cat = document.getElementById(prefix+'-category').value;
+  const suggested = cat === 'pression' ? 'pression' : cat === 'vin' ? 'wine' : 'simple';
+  document.getElementById(prefix+'-priceType').value = suggested;
+  handlePriceType(prefix);
+}
+
+// ── SEED DATA ──
+function seedData() {
+  if (!confirm('Importer les 40 boissons de la carte initiale ? (Annule si tu as déjà des données)')) return;
+  showToast('Import en cours...', '');
+  let count = 0;
+  const promises = SEED.map(d => {
+    const data = { ...d, createdAt: Date.now() };
+    return db.ref('drinks').push(data).then(() => count++);
+  });
+  Promise.all(promises)
+    .then(() => { showToast(`${count} boissons importées !`, 'success'); loadAdminDrinks(); })
+    .catch(err => showToast('Erreur : '+err.message, 'error'));
+}
+
+// ── CLOSE MODALS ON OVERLAY ──
+document.getElementById('modal-edit-bg').addEventListener('click', function(e) {
+  if (e.target === this) closeEditModal(null);
+});
+
+// ── INIT ──
+loadAndRenderHome();
+</script>
+</body>
+</html>
