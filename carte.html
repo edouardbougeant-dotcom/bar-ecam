@@ -283,6 +283,32 @@ nav{position:sticky;top:0;z-index:100;background:rgba(10,10,15,0.92);backdrop-fi
       <button class="btn-admin btn-admin-secondary" onclick="seedData()" style="white-space:nowrap;flex-shrink:0;">📋 Importer</button>
     </div>
 
+    <!-- Liaison automatique des images hébergées sur GitHub -->
+    <div class="admin-section anim d1">
+      <div class="admin-section-title">Photos des boissons</div>
+      <div class="field">
+        <label>Dossier des images</label>
+        <input type="url" id="img-base" value="https://edouardbougeant-dotcom.github.io/bar-ecam/">
+        <div class="field-hint">Dossier où sont déposées les photos dans le dépôt GitHub. Les fichiers portent le nom de la boisson sans accent : <strong>fuze-tea</strong>, <strong>cafe-allonge</strong>. Si tu les ranges un jour dans un sous-dossier, ajoute <strong>images/</strong> à la fin de cette adresse.</div>
+      </div>
+      <div class="field">
+        <label>Extension des fichiers</label>
+        <select id="img-ext">
+          <option value=".JPG">.JPG (majuscules — sortie appareil photo)</option>
+          <option value=".jpg">.jpg (minuscules)</option>
+          <option value=".jpeg">.jpeg</option>
+          <option value=".png">.png</option>
+          <option value=".webp">.webp</option>
+        </select>
+        <div class="field-hint">⚠️ GitHub distingue les majuscules des minuscules : <strong>corona.JPG</strong> et <strong>corona.jpg</strong> sont deux fichiers différents. Choisis exactement ce que tu vois dans ton dépôt.</div>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap;">
+        <button class="btn-admin" onclick="autoLinkImages()" style="flex:1;min-width:150px;">🔗 Relier les photos</button>
+        <button class="btn-admin btn-admin-outline" onclick="checkImages()" style="flex:1;min-width:150px;">🔍 Vérifier</button>
+      </div>
+      <div id="img-report" style="font-size:12px;line-height:1.7;margin-top:12px;"></div>
+    </div>
+
     <!-- Existing drinks -->
     <div class="admin-section anim d2">
       <div class="admin-section-title">Boissons existantes</div>
@@ -1172,6 +1198,85 @@ function handleCategoryChange(prefix) {
   const suggested = cat === 'pression' ? 'pression' : cat === 'vin' ? 'wine' : 'simple';
   document.getElementById(prefix+'-priceType').value = suggested;
   handlePriceType(prefix);
+}
+
+// ── PHOTOS : LIAISON ET VÉRIFICATION ──
+
+// Transforme "Café allongé" en "cafe-allonge" : minuscules, accents retirés,
+// tout caractère non alphanumérique remplacé par un tiret.
+function slugify(s) {
+  return (s || '')
+    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+}
+
+function getBaseUrl() {
+  let base = document.getElementById('img-base').value.trim();
+  if (base && !base.endsWith('/')) base += '/';
+  return base;
+}
+
+function autoLinkImages() {
+  const base = getBaseUrl();
+  if (!base) { showToast('Renseigne le dossier des images', 'error'); return; }
+
+  const ids = Object.keys(allDrinks);
+  if (ids.length === 0) { showToast('Aucune boisson en base', 'error'); return; }
+  if (!confirm(`Associer une photo à ${ids.length} boissons ?\n\nLes URL d'images déjà renseignées seront remplacées.`)) return;
+
+  const ext = document.getElementById('img-ext').value;
+  const updates = {};
+  ids.forEach(id => {
+    updates[id + '/image'] = base + slugify(allDrinks[id].name) + ext;
+  });
+
+  db.ref('drinks').update(updates)
+    .then(() => {
+      showToast(`${ids.length} photos reliées`, 'success');
+      loadAdminDrinks();
+      setTimeout(checkImages, 600);
+    })
+    .catch(err => showToast('Erreur : ' + err.message, 'error'));
+}
+
+// Teste réellement le chargement de chaque image et liste celles qui échouent,
+// pour repérer d'un coup les fichiers mal nommés ou absents du dépôt.
+function checkImages() {
+  const report = document.getElementById('img-report');
+  const entries = Object.entries(allDrinks).filter(([, d]) => d.image);
+
+  if (entries.length === 0) {
+    report.innerHTML = '<span style="color:var(--muted);">Aucune boisson n\'a d\'image pour l\'instant.</span>';
+    return;
+  }
+
+  report.innerHTML = '<span style="color:var(--muted);">Vérification en cours…</span>';
+
+  const test = url => new Promise(resolve => {
+    const img = new Image();
+    const done = ok => { clearTimeout(t); resolve(ok); };
+    const t = setTimeout(() => done(false), 8000);
+    img.onload = () => done(true);
+    img.onerror = () => done(false);
+    img.src = url;
+  });
+
+  Promise.all(entries.map(([, d]) => test(d.image)))
+    .then(results => {
+      const broken = entries.filter((_, i) => !results[i]);
+      if (broken.length === 0) {
+        report.innerHTML = `<span style="color:var(--green);">✅ Les ${entries.length} photos s'affichent correctement.</span>`;
+        return;
+      }
+      report.innerHTML =
+        `<div style="color:var(--red);margin-bottom:6px;">❌ ${broken.length} photo(s) introuvable(s) sur ${entries.length} :</div>` +
+        broken.map(([, d]) =>
+          `<div style="color:var(--muted);">• <strong style="color:var(--text);">${d.name}</strong> → attend le fichier <code>${d.image.split('/').pop()}</code></div>`
+        ).join('') +
+        `<div style="color:var(--muted);margin-top:8px;">Vérifie le nom exact de ces fichiers dans le dossier <code>images/</code> de ton dépôt GitHub.</div>`;
+    });
 }
 
 // ── SEED DATA ──
